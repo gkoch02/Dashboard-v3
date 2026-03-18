@@ -246,3 +246,99 @@ class TestDegToCompass:
         cardinals = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"}
         results = {deg_to_compass(i * 45) for i in range(8)}
         assert results == cardinals
+
+
+# ---------------------------------------------------------------------------
+# _today() with timezone (line 22)
+# ---------------------------------------------------------------------------
+
+class TestToday:
+    def test_today_with_none_tz_returns_local_date(self):
+        from src.fetchers.weather import _today
+        result = _today(None)
+        assert result == date.today()
+
+    def test_today_with_tz_returns_tz_aware_date(self):
+        import zoneinfo
+        from src.fetchers.weather import _today
+        tz = zoneinfo.ZoneInfo("America/Los_Angeles")
+        result = _today(tz)
+        expected = datetime.now(tz).date()
+        assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# Sunrise / sunset parsing (lines 54-57)
+# ---------------------------------------------------------------------------
+
+class TestSunriseSunset:
+    @patch("src.fetchers.weather.requests.Session")
+    def test_sunrise_sunset_parsed(self, mock_session_cls, cfg):
+        """Verify sunrise and sunset are populated when sys key is present."""
+        from datetime import timezone as _tz
+        today = date.today()
+
+        sunrise_ts = int(datetime(today.year, today.month, today.day, 6, 24, tzinfo=_tz.utc).timestamp())
+        sunset_ts = int(datetime(today.year, today.month, today.day, 19, 51, tzinfo=_tz.utc).timestamp())
+
+        current_resp = MagicMock()
+        current_resp.json.return_value = {
+            "main": {
+                "temp": 42.0, "temp_max": 48.0, "temp_min": 35.0, "humidity": 65,
+                "feels_like": 38.0,
+            },
+            "weather": [{"icon": "02d", "description": "partly cloudy"}],
+            "sys": {"sunrise": sunrise_ts, "sunset": sunset_ts},
+            "wind": {"speed": 10.0, "deg": 270.0},
+        }
+        current_resp.raise_for_status = MagicMock()
+
+        forecast_resp = MagicMock()
+        forecast_resp.json.return_value = _mock_forecast_response(today)
+        forecast_resp.raise_for_status = MagicMock()
+
+        alerts_resp = MagicMock()
+        alerts_resp.json.return_value = {}
+        alerts_resp.raise_for_status = MagicMock()
+
+        session = MagicMock()
+        session.get.side_effect = [current_resp, forecast_resp, alerts_resp]
+        mock_session_cls.return_value.__enter__ = MagicMock(return_value=session)
+        mock_session_cls.return_value.__exit__ = MagicMock(return_value=False)
+
+        result = fetch_weather(cfg)
+
+        assert result.sunrise is not None
+        assert result.sunset is not None
+        assert result.sunrise.hour == 6
+        assert result.sunset.hour == 19
+
+    @patch("src.fetchers.weather.requests.Session")
+    def test_sunrise_sunset_absent_when_no_sys_key(self, mock_session_cls, cfg):
+        """sunrise/sunset are None when the API response has no sys key."""
+        today = date.today()
+
+        current_resp = MagicMock()
+        current_resp.json.return_value = {
+            "main": {"temp": 42.0, "temp_max": 48.0, "temp_min": 35.0, "humidity": 65},
+            "weather": [{"icon": "02d", "description": "cloudy"}],
+            # No "sys" key
+        }
+        current_resp.raise_for_status = MagicMock()
+
+        forecast_resp = MagicMock()
+        forecast_resp.json.return_value = _mock_forecast_response(today)
+        forecast_resp.raise_for_status = MagicMock()
+
+        alerts_resp = MagicMock()
+        alerts_resp.json.return_value = {}
+        alerts_resp.raise_for_status = MagicMock()
+
+        session = MagicMock()
+        session.get.side_effect = [current_resp, forecast_resp, alerts_resp]
+        mock_session_cls.return_value.__enter__ = MagicMock(return_value=session)
+        mock_session_cls.return_value.__exit__ = MagicMock(return_value=False)
+
+        result = fetch_weather(cfg)
+        assert result.sunrise is None
+        assert result.sunset is None

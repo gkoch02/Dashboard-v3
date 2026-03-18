@@ -205,3 +205,48 @@ class TestLoadConfig:
         cfg = load_config(str(p))
         assert cfg.schedule.quiet_hours_start == 23
         assert cfg.schedule.quiet_hours_end == 6
+
+    def test_cache_section_loaded(self, tmp_path):
+        """load_config() parses the cache: section into CacheConfig (lines 169-170)."""
+        from src.config import CacheConfig
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump({
+            "cache": {
+                "weather_ttl_minutes": 30,
+                "events_ttl_minutes": 90,
+                "birthdays_ttl_minutes": 720,
+                "weather_fetch_interval": 15,
+                "events_fetch_interval": 60,
+                "birthdays_fetch_interval": 480,
+                "max_failures": 5,
+                "cooldown_minutes": 15,
+            }
+        }))
+        cfg = load_config(str(p))
+        assert cfg.cache.weather_ttl_minutes == 30
+        assert cfg.cache.events_ttl_minutes == 90
+        assert cfg.cache.max_failures == 5
+        assert cfg.cache.cooldown_minutes == 15
+
+    def test_filters_section_loaded(self, tmp_path):
+        """load_config() parses the filters: section into FilterConfig (lines 182-183)."""
+        from src.config import FilterConfig
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump({
+            "filters": {
+                "exclude_calendars": ["Holidays"],
+                "exclude_keywords": ["standup"],
+                "exclude_all_day": True,
+            }
+        }))
+        cfg = load_config(str(p))
+        assert cfg.filters.exclude_calendars == ["Holidays"]
+        assert cfg.filters.exclude_keywords == ["standup"]
+        assert cfg.filters.exclude_all_day is True
+
+    def test_title_loaded_from_config(self, tmp_path):
+        """load_config() stores the top-level title field (line 196)."""
+        p = tmp_path / "config.yaml"
+        p.write_text(yaml.dump({"title": "My Custom Dashboard"}))
+        cfg = load_config(str(p))
+        assert cfg.title == "My Custom Dashboard"

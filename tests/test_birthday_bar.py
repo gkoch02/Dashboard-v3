@@ -109,3 +109,27 @@ class TestDrawBirthdays:
         # Today's birthday row is inverted (has black fill), future is not
         # Simply verify both render differently
         assert img_today.tobytes() != img_future.tobytes()
+
+    def test_early_break_when_layout_too_small(self):
+        """The break in _draw_day_events fires when y + line_h exceeds available space (line 44).
+
+        Achieved by patching BIRTHDAY_H to a small value so the condition triggers.
+        """
+        from unittest.mock import patch
+        today = date(2024, 3, 15)
+        birthdays = [
+            Birthday(name="Alice", date=today + timedelta(days=1)),
+            Birthday(name="Bob", date=today + timedelta(days=2)),
+            Birthday(name="Carol", date=today + timedelta(days=3)),
+        ]
+        img, draw = _make_draw()
+        # Set BIRTHDAY_H to 50 so y+line_h > y0+h-pad fires during first iteration:
+        # y = y0+32, line_h=22, h=50, pad=8 → 32+22=54 > 50-8=42 → break at i=0
+        import src.render.layout as layout_mod
+        original_h = layout_mod.BIRTHDAY_H
+        layout_mod.BIRTHDAY_H = 50
+        try:
+            draw_birthdays(draw, birthdays, today)
+        finally:
+            layout_mod.BIRTHDAY_H = original_h
+        assert img.getbbox() is not None

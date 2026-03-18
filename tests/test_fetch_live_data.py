@@ -212,3 +212,104 @@ class TestFetchIntervals:
                  patch("src.main.fetch_birthdays") as mock_bdays:
                 fetch_live_data(cfg, tmpdir)
             mock_bdays.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Expired cache (>4×TTL) — lines 289-291
+# ---------------------------------------------------------------------------
+
+class TestExpiredCache:
+    """Expired cache (>4×TTL) must be discarded, not used."""
+
+    def test_expired_cache_discarded_on_weather_failure(self):
+        cfg = Config()
+        # Write cache that is far beyond 4×TTL (weather TTL=60min → 4×TTL=240min)
+        very_old = datetime.now() - timedelta(hours=24)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("weather", _make_weather(), very_old, tmpdir)
+            with patch("src.main.fetch_events", return_value=[]), \
+                 patch("src.main.fetch_weather", side_effect=RuntimeError("down")), \
+                 patch("src.main.fetch_birthdays", return_value=[]):
+                data = fetch_live_data(cfg, tmpdir)
+        # Weather should be None — expired cache was discarded
+        assert data.weather is None
+
+    def test_expired_cache_not_in_staleness_map(self):
+        cfg = Config()
+        very_old = datetime.now() - timedelta(hours=24)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("events", [], very_old, tmpdir)
+            with patch("src.main.fetch_events", side_effect=Exception("down")), \
+                 patch("src.main.fetch_weather", return_value=_make_weather()), \
+                 patch("src.main.fetch_birthdays", return_value=[]):
+                data = fetch_live_data(cfg, tmpdir)
+        # Expired cache was discarded; events should be empty list
+        assert data.events == []
+
+
+# ---------------------------------------------------------------------------
+# Circuit breaker open path — lines 331-333
+# ---------------------------------------------------------------------------
+
+class TestCircuitBreakerOpenPath:
+    """When the circuit breaker is OPEN, _should_skip returns the cached value."""
+
+    def test_open_breaker_uses_cache_without_fetching(self):
+        from src.fetchers.circuit_breaker import CircuitBreaker
+        cfg = Config()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Write usable cache
+            _make_cached(tmpdir)
+            # Pre-open the breaker for all sources
+            breaker = CircuitBreaker(
+                max_failures=3,
+                cooldown_minutes=60,
+                state_dir=tmpdir,
+            )
+            for source in ("events", "weather", "birthdays"):
+                for _ in range(3):
+                    breaker.record_failure(source)
+
+            # fetch_live_data creates its own CircuitBreaker pointed at the same dir
+            with patch("src.main.fetch_events") as mock_events, \
+                 patch("src.main.fetch_weather") as mock_weather, \
+                 patch("src.main.fetch_birthdays") as mock_bdays:
+                data = fetch_live_data(cfg, tmpdir)
+
+        # Breaker is OPEN → no live fetches made
+        mock_events.assert_not_called()
+        mock_weather.assert_not_called()
+        mock_bdays.assert_not_called()
+        # Cached weather should have been used
+        assert data.weather is not None and data.weather.current_temp == 55.0
+
+
+# ---------------------------------------------------------------------------
+# Birthday cache fallback — lines 421-422
+# ---------------------------------------------------------------------------
+
+class TestBirthdayCacheFallback:
+    """Birthday fetch failure should fall back to cached birthdays."""
+
+    def test_birthday_failure_uses_cache(self):
+        from datetime import date
+        cfg = Config()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Birthday cache must be older than birthdays_fetch_interval (default 1440 min)
+            # so a fetch is actually attempted. Use 25 hours (1500 min > 1440 min).
+            old_ts = datetime.now() - timedelta(hours=25)
+            cached_birthday = __import__("src.data.models", fromlist=["Birthday"]).Birthday(
+                name="Cached Person", date=date(2024, 3, 20)
+            )
+            save_source("birthdays", [cached_birthday], old_ts, tmpdir)
+            mock_weather = WeatherData(
+                current_temp=42.0, current_icon="01d", current_description="clear",
+                high=48.0, low=35.0, humidity=60,
+            )
+            with patch("src.main.fetch_events", return_value=[]), \
+                 patch("src.main.fetch_weather", return_value=mock_weather), \
+                 patch("src.main.fetch_birthdays", side_effect=Exception("contacts API down")):
+                data = fetch_live_data(cfg, tmpdir)
+
+        assert data.is_stale
+        assert any(b.name == "Cached Person" for b in data.birthdays)
