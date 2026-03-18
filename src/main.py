@@ -73,7 +73,21 @@ def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
         )
 
     events = [
-        # Monday
+        # Sunday — Compact weekend (3 events, threshold ≥3)
+        CalendarEvent(
+            summary="Brunch",
+            start=_at(0, 10), end=_at(0, 12),
+            location="The Griddle Cafe",
+        ),
+        CalendarEvent(
+            summary="Grocery Run",
+            start=_at(0, 14), end=_at(0, 15),
+        ),
+        CalendarEvent(
+            summary="Family Call",
+            start=_at(0, 17), end=_at(0, 17, 30),
+        ),
+        # Monday — Normal weekday (2 events, threshold ≤4)
         CalendarEvent(
             summary="Team Standup",
             start=_at(1, 9), end=_at(1, 9, 30),
@@ -84,11 +98,32 @@ def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
             start=_at(1, 14), end=_at(1, 14, 30),
             location="Conference Room B",
         ),
-        # Tuesday
+        # Tuesday — Compact weekday (6 events, threshold 5–7)
+        CalendarEvent(
+            summary="Morning Standup",
+            start=_at(2, 9), end=_at(2, 9, 15),
+        ),
         CalendarEvent(
             summary="Dentist Appointment",
             start=_at(2, 10), end=_at(2, 11),
             location="123 Main St, Suite 4",
+        ),
+        CalendarEvent(
+            summary="Sprint Review",
+            start=_at(2, 11), end=_at(2, 12),
+        ),
+        CalendarEvent(
+            summary="Lunch with Team",
+            start=_at(2, 12), end=_at(2, 13),
+            location="Tartine Manufactory",
+        ),
+        CalendarEvent(
+            summary="Design Sync",
+            start=_at(2, 15, 30), end=_at(2, 16),
+        ),
+        CalendarEvent(
+            summary="Code Review",
+            start=_at(2, 16, 30), end=_at(2, 17, 30),
         ),
         # Wednesday–Friday: multi-day conference (spanning bar)
         CalendarEvent(
@@ -102,15 +137,41 @@ def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
             start=_at(3, 17, 30), end=_at(3, 18, 30),
             location="Studio 12",
         ),
-        # Thursday
+        # Thursday — Dense weekday (8 events, threshold ≥8)
+        CalendarEvent(
+            summary="Morning Standup",
+            start=_at(4, 9), end=_at(4, 9, 15),
+        ),
         CalendarEvent(
             summary="Project Planning",
             start=_at(4, 10), end=_at(4, 11, 30),
         ),
         CalendarEvent(
+            summary="Architecture Review",
+            start=_at(4, 11, 30), end=_at(4, 12, 30),
+            location="Conf Room A",
+        ),
+        CalendarEvent(
+            summary="HR Check-in",
+            start=_at(4, 13), end=_at(4, 13, 30),
+        ),
+        CalendarEvent(
+            summary="Stakeholder Briefing",
+            start=_at(4, 13, 30), end=_at(4, 14, 30),
+            location="Board Room",
+        ),
+        CalendarEvent(
             summary="Coffee with Sam",
             start=_at(4, 15), end=_at(4, 15, 45),
             location="Blue Bottle, Market St",
+        ),
+        CalendarEvent(
+            summary="Bug Triage",
+            start=_at(4, 15, 45), end=_at(4, 16, 15),
+        ),
+        CalendarEvent(
+            summary="Sprint Retro",
+            start=_at(4, 16, 30), end=_at(4, 17, 30),
         ),
         # Friday
         CalendarEvent(
@@ -118,7 +179,7 @@ def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
             start=_at(5, 14), end=_at(5, 15),
             location="Main Auditorium",
         ),
-        # Saturday
+        # Saturday — Normal weekend (1 event, threshold ≤2)
         CalendarEvent(
             summary="Farmers Market",
             start=_at(6, 9), end=_at(6, 11),
