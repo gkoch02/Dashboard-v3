@@ -6,7 +6,7 @@ from pathlib import Path
 from PIL import ImageDraw
 
 from src.render import layout as L
-from src.render.fonts import semibold, regular, lora_italic
+from src.render.fonts import semibold, regular
 from src.render.primitives import BLACK, hline, draw_text_wrapped
 
 QUOTES_FILE = Path(__file__).parent.parent.parent.parent / "config" / "quotes.json"
@@ -107,9 +107,9 @@ def draw_info(draw: ImageDraw.ImageDraw, today: date):
     y = y0 + 28
     max_width = w - pad * 2
 
-    quote_font = lora_italic(14)
+    quote_font = regular(14)
     if _count_lines(text, quote_font, max_width) > 3:
-        quote_font = lora_italic(12)
+        quote_font = regular(12)
         max_lines = 4
     else:
         max_lines = 3
