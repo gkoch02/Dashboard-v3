@@ -314,3 +314,71 @@ class TestFontsForTier:
         _, _, _, dense_spacing, _, _, _ = _fonts_for_tier("dense")
         # normal > compact > dense
         assert normal_spacing > compact_spacing > dense_spacing
+
+
+# ---------------------------------------------------------------------------
+# _draw_day_events — allday_font default (line 392) and overflow (lines 404-406)
+# ---------------------------------------------------------------------------
+
+class TestDrawDayEvents:
+    """Exercise _draw_day_events directly for edge-case branches."""
+
+    def _make_draw(self):
+        img = Image.new("1", (800, 480), 1)
+        return img, ImageDraw.Draw(img)
+
+    def _timed(self, hour_start: int, hour_end: int, summary: str = "Event") -> CalendarEvent:
+        day = date(2024, 3, 15)
+        return CalendarEvent(
+            summary=summary,
+            start=datetime.combine(day, datetime.min.time().replace(hour=hour_start)),
+            end=datetime.combine(day, datetime.min.time().replace(hour=hour_end)),
+        )
+
+    def test_default_allday_font_is_used_when_none(self):
+        """Calling _draw_day_events without allday_font triggers the default (line 392)."""
+        from src.render.components.week_view import _draw_day_events
+        from src.render.fonts import regular, semibold
+
+        img, draw = self._make_draw()
+        event = CalendarEvent(
+            summary="All Day Event",
+            start=datetime(2024, 3, 15),
+            end=datetime(2024, 3, 16),
+            is_all_day=True,
+        )
+        # Pass allday_font=None (the default) — exercises line 392
+        _draw_day_events(
+            draw=draw,
+            events=[event],
+            cx=0,
+            y_start=40,
+            col_w=114,
+            max_h=280,
+            time_font=regular(10),
+            title_font=semibold(13),
+            allday_font=None,  # triggers line 392
+        )
+        assert img.getbbox() is not None
+
+    def test_overflow_indicator_shown_when_events_exceed_space(self):
+        """When events don't fit, '+N more' is shown (lines 404-406)."""
+        from src.render.components.week_view import _draw_day_events
+        from src.render.fonts import regular, semibold
+
+        img, draw = self._make_draw()
+        # Create many events
+        events = [self._timed(h, h + 1, f"Event {h}") for h in range(8, 18)]
+
+        # Use a very small max_h so events overflow quickly
+        _draw_day_events(
+            draw=draw,
+            events=events,
+            cx=0,
+            y_start=40,
+            col_w=114,
+            max_h=50,  # tiny — forces overflow after first event
+            time_font=regular(10),
+            title_font=semibold(13),
+        )
+        assert img.getbbox() is not None

@@ -60,3 +60,20 @@ class TestQuotaTracker:
         path.write_text("bad json")
         qt = QuotaTracker(state_dir=tmp_state_dir)
         assert qt.daily_count("events") == 0
+
+    def test_ensure_today_resets_counts_on_day_change(self, tmp_state_dir):
+        """_ensure_today resets _counts when the day changes in a live instance (lines 55-56)."""
+        qt = QuotaTracker(state_dir=tmp_state_dir)
+        qt.record_call("events", count=10)
+        # Simulate the day ticking over on the same instance without reloading
+        qt._today = "2020-01-01"
+        # Next call to record_call triggers _ensure_today → resets counts
+        qt.record_call("events", count=1)
+        assert qt.daily_count("events") == 1  # reset + 1, not 11
+
+    def test_save_exception_does_not_propagate(self, tmp_state_dir):
+        """_save() silently swallows write errors (lines 78-79)."""
+        from unittest.mock import patch
+        qt = QuotaTracker(state_dir=tmp_state_dir)
+        with patch("src.fetchers.quota_tracker.json.dump", side_effect=OSError("disk full")):
+            qt.record_call("events")  # triggers _save(), should not raise
