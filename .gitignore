@@ -11,3 +11,8 @@ config/config.yaml
 # Output directory — mostly generated; only latest.png is tracked
 output/*
 !output/latest.png
+
+# Coverage reports
+.coverage
+coverage.json
+htmlcov/
