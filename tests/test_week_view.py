@@ -4,8 +4,10 @@ from datetime import date, datetime, timedelta
 
 from PIL import Image, ImageDraw
 
-from src.data.models import CalendarEvent
-from src.render.components.week_view import _events_for_day, _fmt_time, draw_week
+from src.data.models import CalendarEvent, DayForecast
+from src.render.components.week_view import (
+    _density_tier, _events_for_day, _fmt_time, _fonts_for_tier, draw_week,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -177,3 +179,138 @@ class TestDrawWeek:
         # There must be at least one black pixel (inverted today header)
         bbox = img.getbbox()
         assert bbox is not None
+
+    def test_smoke_with_forecast_icons(self):
+        """draw_week with forecast data should not crash."""
+        img, draw = self._make_draw()
+        today = date(2024, 3, 18)  # Monday
+        forecast = [
+            DayForecast(
+                date=today + timedelta(days=i), high=50.0 + i, low=35.0,
+                icon="01d", description="clear", precip_chance=0.1,
+            )
+            for i in range(5)
+        ]
+        draw_week(draw, [], today, forecast=forecast)
+        assert img.getbbox() is not None
+
+    def test_smoke_spanning_event_excludes_from_per_day(self):
+        """Multi-day spanning events don't crash and render as bars."""
+        img, draw = self._make_draw()
+        today = date(2024, 3, 18)  # Monday
+        week_start = today - timedelta(days=today.weekday())
+        spanning = CalendarEvent(
+            summary="Conference",
+            start=datetime.combine(week_start + timedelta(days=1), datetime.min.time()),
+            end=datetime.combine(week_start + timedelta(days=4), datetime.min.time()),
+            is_all_day=True,
+        )
+        draw_week(draw, [spanning], today)
+        assert img.getbbox() is not None
+
+
+# ---------------------------------------------------------------------------
+# _density_tier
+# ---------------------------------------------------------------------------
+
+class TestDensityTier:
+    # --- Weekday thresholds ---
+    def test_weekday_normal_zero_events(self):
+        assert _density_tier(0, is_weekend=False) == "normal"
+
+    def test_weekday_normal_four_events(self):
+        assert _density_tier(4, is_weekend=False) == "normal"
+
+    def test_weekday_compact_five_events(self):
+        assert _density_tier(5, is_weekend=False) == "compact"
+
+    def test_weekday_compact_seven_events(self):
+        assert _density_tier(7, is_weekend=False) == "compact"
+
+    def test_weekday_dense_eight_events(self):
+        assert _density_tier(8, is_weekend=False) == "dense"
+
+    def test_weekday_dense_many_events(self):
+        assert _density_tier(20, is_weekend=False) == "dense"
+
+    # --- Weekend thresholds (lower) ---
+    def test_weekend_normal_zero_events(self):
+        assert _density_tier(0, is_weekend=True) == "normal"
+
+    def test_weekend_normal_two_events(self):
+        assert _density_tier(2, is_weekend=True) == "normal"
+
+    def test_weekend_compact_three_events(self):
+        assert _density_tier(3, is_weekend=True) == "compact"
+
+    def test_weekend_compact_four_events(self):
+        assert _density_tier(4, is_weekend=True) == "compact"
+
+    def test_weekend_dense_five_events(self):
+        assert _density_tier(5, is_weekend=True) == "dense"
+
+    def test_weekend_dense_many_events(self):
+        assert _density_tier(10, is_weekend=True) == "dense"
+
+    # --- Boundary: weekday threshold does NOT apply to weekend ---
+    def test_weekend_one_event_is_still_normal(self):
+        """1 event on a weekend stays normal (threshold is ≥3 for compact)."""
+        assert _density_tier(1, is_weekend=True) == "normal"
+
+    def test_weekday_three_events_is_still_normal(self):
+        """3 events on a weekday stays normal (threshold is ≥5 for compact)."""
+        assert _density_tier(3, is_weekend=False) == "normal"
+
+
+# ---------------------------------------------------------------------------
+# _fonts_for_tier
+# ---------------------------------------------------------------------------
+
+class TestFontsForTier:
+    def test_normal_tier_returns_7_tuple(self):
+        result = _fonts_for_tier("normal")
+        assert len(result) == 7
+
+    def test_compact_tier_returns_7_tuple(self):
+        result = _fonts_for_tier("compact")
+        assert len(result) == 7
+
+    def test_dense_tier_returns_7_tuple(self):
+        result = _fonts_for_tier("dense")
+        assert len(result) == 7
+
+    def test_normal_tier_show_location_true(self):
+        _, _, _, _, _, show_location, _ = _fonts_for_tier("normal")
+        assert show_location is True
+
+    def test_compact_tier_show_location_false(self):
+        _, _, _, _, _, show_location, _ = _fonts_for_tier("compact")
+        assert show_location is False
+
+    def test_dense_tier_show_location_false(self):
+        _, _, _, _, _, show_location, _ = _fonts_for_tier("dense")
+        assert show_location is False
+
+    def test_normal_tier_max_title_lines_two(self):
+        _, _, _, _, max_lines, _, _ = _fonts_for_tier("normal")
+        assert max_lines == 2
+
+    def test_compact_tier_max_title_lines_one(self):
+        _, _, _, _, max_lines, _, _ = _fonts_for_tier("compact")
+        assert max_lines == 1
+
+    def test_dense_tier_max_title_lines_one(self):
+        _, _, _, _, max_lines, _, _ = _fonts_for_tier("dense")
+        assert max_lines == 1
+
+    def test_normal_tier_spacing_larger_than_dense(self):
+        _, _, _, normal_spacing, _, _, _ = _fonts_for_tier("normal")
+        _, _, _, dense_spacing, _, _, _ = _fonts_for_tier("dense")
+        assert normal_spacing > dense_spacing
+
+    def test_tiers_have_different_spacings(self):
+        _, _, _, normal_spacing, _, _, _ = _fonts_for_tier("normal")
+        _, _, _, compact_spacing, _, _, _ = _fonts_for_tier("compact")
+        _, _, _, dense_spacing, _, _, _ = _fonts_for_tier("dense")
+        # normal > compact > dense
+        assert normal_spacing > compact_spacing > dense_spacing

@@ -204,6 +204,69 @@ class TestDrawWeatherForecastStrip:
         assert img.getbbox() is not None
 
 
+class TestEnhancedWeatherRendering:
+    """Tests for wind compass direction and UV index rendering paths."""
+
+    def test_wind_compass_rendered_when_wind_deg_present(self):
+        """wind_deg should trigger compass suffix in wind string — no crash."""
+        weather = _make_weather(wind_speed=12.0, wind_deg=270.0)
+        img, draw = _make_draw()
+        draw_weather(draw, weather)
+        assert img.getbbox() is not None
+
+    def test_wind_compass_all_cardinal_directions(self):
+        """All 8 compass sectors render without error."""
+        for deg in [0, 45, 90, 135, 180, 225, 270, 315]:
+            weather = _make_weather(wind_speed=10.0, wind_deg=float(deg))
+            _, draw = _make_draw()
+            draw_weather(draw, weather)  # must not raise
+
+    def test_wind_deg_without_wind_speed_no_crash(self):
+        """wind_deg alone (no wind_speed) should not crash rendering."""
+        weather = _make_weather(wind_speed=None, wind_deg=90.0)
+        img, draw = _make_draw()
+        draw_weather(draw, weather)
+        assert img.getbbox() is not None
+
+    def test_uv_index_renders_in_hilo_row(self):
+        """uv_index is appended to the hi/lo row when it fits."""
+        weather = _make_weather(uv_index=5.0)
+        img, draw = _make_draw()
+        draw_weather(draw, weather)
+        assert img.getbbox() is not None
+
+    def test_uv_index_zero_renders(self):
+        weather = _make_weather(uv_index=0.0)
+        img, draw = _make_draw()
+        draw_weather(draw, weather)
+        assert img.getbbox() is not None
+
+    def test_uv_index_high_value_renders(self):
+        weather = _make_weather(uv_index=11.0)
+        img, draw = _make_draw()
+        draw_weather(draw, weather)
+        assert img.getbbox() is not None
+
+    def test_uv_index_none_no_crash(self):
+        """uv_index=None should not crash and should render normal hi/lo."""
+        weather = _make_weather(uv_index=None)
+        img, draw = _make_draw()
+        draw_weather(draw, weather)
+        assert img.getbbox() is not None
+
+    def test_all_enhanced_fields_together(self):
+        """All v3 enhanced fields (wind_deg, uv_index) together."""
+        weather = _make_weather(
+            wind_speed=15.0,
+            wind_deg=135.0,
+            uv_index=8.0,
+            feels_like=52.0,
+        )
+        img, draw = _make_draw()
+        draw_weather(draw, weather)
+        assert img.getbbox() is not None
+
+
 class TestFmtTime:
     def test_formats_am_time(self):
         dt = datetime(2024, 3, 15, 6, 24, tzinfo=timezone.utc)

@@ -2,14 +2,14 @@
 
 import json
 import tempfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from src.data.models import Birthday, CalendarEvent, DashboardData, DayForecast, WeatherData
-from src.fetchers.cache import load_cached, load_cached_source, save_cache, save_source
+from src.data.models import Birthday, CalendarEvent, DashboardData, DayForecast, StalenessLevel, WeatherData
+from src.fetchers.cache import check_staleness, load_cached, load_cached_source, save_cache, save_source
 
 
 def _make_data() -> DashboardData:
@@ -406,3 +406,153 @@ class TestAtomicWriteCleanup:
             # The temp file should not remain (was cleaned up)
             tmp_files = list(Path(tmpdir).glob("*.tmp"))
             assert len(tmp_files) == 0
+
+
+# ---------------------------------------------------------------------------
+# check_staleness — TTL gradation
+# ---------------------------------------------------------------------------
+
+class TestCheckStaleness:
+    _BASE = datetime(2024, 3, 15, 10, 0, 0)
+    _TTL = 60  # minutes
+
+    def _stale(self, age_minutes: float) -> StalenessLevel:
+        fetched_at = self._BASE - timedelta(minutes=age_minutes)
+        return check_staleness(fetched_at, self._TTL, now=self._BASE)
+
+    # --- FRESH boundary ---
+    def test_fresh_at_zero_age(self):
+        assert self._stale(0) == StalenessLevel.FRESH
+
+    def test_fresh_within_ttl(self):
+        assert self._stale(30) == StalenessLevel.FRESH
+
+    def test_fresh_at_exact_ttl(self):
+        assert self._stale(60) == StalenessLevel.FRESH
+
+    # --- AGING boundary ---
+    def test_aging_just_over_ttl(self):
+        assert self._stale(61) == StalenessLevel.AGING
+
+    def test_aging_at_2x_ttl(self):
+        assert self._stale(120) == StalenessLevel.AGING
+
+    # --- STALE boundary ---
+    def test_stale_just_over_2x_ttl(self):
+        assert self._stale(121) == StalenessLevel.STALE
+
+    def test_stale_at_4x_ttl(self):
+        assert self._stale(240) == StalenessLevel.STALE
+
+    # --- EXPIRED boundary ---
+    def test_expired_just_over_4x_ttl(self):
+        assert self._stale(241) == StalenessLevel.EXPIRED
+
+    def test_expired_very_old(self):
+        assert self._stale(10000) == StalenessLevel.EXPIRED
+
+    # --- Uses datetime.now() when now=None ---
+    def test_defaults_to_now(self):
+        # Data fetched 1 second ago — must be FRESH
+        fetched_at = datetime.now() - timedelta(seconds=1)
+        result = check_staleness(fetched_at, ttl_minutes=60)
+        assert result == StalenessLevel.FRESH
+
+    # --- Different TTL values ---
+    def test_five_minute_ttl_fresh(self):
+        fetched_at = self._BASE - timedelta(minutes=3)
+        assert check_staleness(fetched_at, 5, now=self._BASE) == StalenessLevel.FRESH
+
+    def test_five_minute_ttl_expired(self):
+        fetched_at = self._BASE - timedelta(minutes=25)
+        assert check_staleness(fetched_at, 5, now=self._BASE) == StalenessLevel.EXPIRED
+
+
+# ---------------------------------------------------------------------------
+# Enhanced weather fields (wind_deg, uv_index, pressure) cache round-trip
+# ---------------------------------------------------------------------------
+
+class TestEnhancedWeatherFieldsCache:
+    def _make_full_weather(self) -> WeatherData:
+        return WeatherData(
+            current_temp=55.0,
+            current_icon="01d",
+            current_description="clear",
+            high=60.0,
+            low=45.0,
+            humidity=50,
+            wind_deg=270.0,
+            uv_index=7.5,
+            pressure=1015.0,
+        )
+
+    def test_wind_deg_round_trips_via_save_source(self):
+        weather = self._make_full_weather()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("weather", weather, datetime(2024, 3, 15, 8), tmpdir)
+            result = load_cached_source("weather", tmpdir)
+        assert result is not None
+        w, _ = result
+        assert w.wind_deg == 270.0
+
+    def test_uv_index_round_trips_via_save_source(self):
+        weather = self._make_full_weather()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("weather", weather, datetime(2024, 3, 15, 8), tmpdir)
+            result = load_cached_source("weather", tmpdir)
+        assert result is not None
+        w, _ = result
+        assert w.uv_index == 7.5
+
+    def test_pressure_round_trips_via_save_source(self):
+        weather = self._make_full_weather()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("weather", weather, datetime(2024, 3, 15, 8), tmpdir)
+            result = load_cached_source("weather", tmpdir)
+        assert result is not None
+        w, _ = result
+        assert w.pressure == 1015.0
+
+    def test_none_enhanced_fields_deserialise_as_none(self):
+        """Fields absent in the cache file deserialise to None (backward compat)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Write a v2 cache file missing the new fields
+            raw = {
+                "schema_version": 2,
+                "weather": {
+                    "fetched_at": "2024-03-15T08:00:00",
+                    "data": {
+                        "current_temp": 42.0,
+                        "current_icon": "01d",
+                        "current_description": "clear",
+                        "high": 50.0,
+                        "low": 35.0,
+                        "humidity": 60,
+                        "forecast": [],
+                        "alerts": [],
+                        # wind_deg, uv_index, pressure intentionally absent
+                    },
+                },
+            }
+            (Path(tmpdir) / "dashboard_cache.json").write_text(json.dumps(raw))
+            result = load_cached_source("weather", tmpdir)
+        assert result is not None
+        w, _ = result
+        assert w.wind_deg is None
+        assert w.uv_index is None
+        assert w.pressure is None
+
+    def test_all_enhanced_fields_round_trip_via_save_cache(self):
+        weather = self._make_full_weather()
+        data = DashboardData(
+            fetched_at=datetime(2024, 3, 15, 8),
+            weather=weather,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_cache(data, tmpdir)
+            loaded = load_cached(tmpdir)
+        assert loaded is not None
+        w = loaded.weather
+        assert w.wind_deg == 270.0
+        assert w.uv_index == 7.5
+        assert w.pressure == 1015.0
