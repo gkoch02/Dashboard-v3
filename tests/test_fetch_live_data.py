@@ -1,12 +1,12 @@
 """Tests for fetch_live_data cache fallback logic in main.py."""
 
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from src.config import Config
-from src.data.models import DashboardData, WeatherData, CalendarEvent, Birthday
-from src.fetchers.cache import save_cache
+from src.data.models import DashboardData, StalenessLevel, WeatherData, CalendarEvent, Birthday
+from src.fetchers.cache import save_cache, save_source
 from src.main import fetch_live_data
 
 
@@ -123,3 +123,92 @@ class TestFetchLiveData:
                  patch("src.main.fetch_birthdays", return_value=[]):
                 fetch_live_data(cfg, tmpdir)
             assert os.path.exists(os.path.join(tmpdir, "dashboard_cache.json"))
+
+
+# ---------------------------------------------------------------------------
+# Per-source fetch intervals
+# ---------------------------------------------------------------------------
+
+def _make_weather() -> WeatherData:
+    return WeatherData(
+        current_temp=55.0, current_icon="01d", current_description="clear",
+        high=60.0, low=45.0, humidity=50,
+    )
+
+
+class TestFetchIntervals:
+    """Verify that recently-cached sources skip the API call."""
+
+    def test_weather_skipped_when_cache_is_fresh(self):
+        """Weather cached 1 minute ago (interval default=30) should not trigger fetch_weather."""
+        cfg = Config()
+        recent_ts = datetime.now() - timedelta(minutes=1)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("weather", _make_weather(), recent_ts, tmpdir)
+            with patch("src.main.fetch_events", return_value=[]) as mock_events, \
+                 patch("src.main.fetch_weather") as mock_weather, \
+                 patch("src.main.fetch_birthdays", return_value=[]) as mock_bdays:
+                fetch_live_data(cfg, tmpdir)
+            mock_weather.assert_not_called()
+
+    def test_weather_fetched_when_cache_is_old(self):
+        """Weather cached 60 minutes ago (interval=30) should trigger fetch_weather."""
+        cfg = Config()
+        old_ts = datetime.now() - timedelta(minutes=60)
+        mock_w = _make_weather()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("weather", mock_w, old_ts, tmpdir)
+            with patch("src.main.fetch_events", return_value=[]), \
+                 patch("src.main.fetch_weather", return_value=mock_w) as mock_weather, \
+                 patch("src.main.fetch_birthdays", return_value=[]):
+                fetch_live_data(cfg, tmpdir)
+            mock_weather.assert_called_once()
+
+    def test_force_refresh_bypasses_interval(self):
+        """force_refresh=True must call fetch_weather even when cache is brand-new."""
+        cfg = Config()
+        recent_ts = datetime.now() - timedelta(seconds=5)
+        mock_w = _make_weather()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("weather", mock_w, recent_ts, tmpdir)
+            with patch("src.main.fetch_events", return_value=[]), \
+                 patch("src.main.fetch_weather", return_value=mock_w) as mock_weather, \
+                 patch("src.main.fetch_birthdays", return_value=[]):
+                fetch_live_data(cfg, tmpdir, force_refresh=True)
+            mock_weather.assert_called_once()
+
+    def test_fresh_interval_result_marked_fresh(self):
+        """Data reused from interval cache should be marked FRESH in source_staleness."""
+        cfg = Config()
+        recent_ts = datetime.now() - timedelta(minutes=1)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("weather", _make_weather(), recent_ts, tmpdir)
+            with patch("src.main.fetch_events", return_value=[]), \
+                 patch("src.main.fetch_weather") as mock_weather, \
+                 patch("src.main.fetch_birthdays", return_value=[]):
+                data = fetch_live_data(cfg, tmpdir)
+            assert data.source_staleness.get("weather") == StalenessLevel.FRESH
+
+    def test_events_skipped_when_cache_is_fresh(self):
+        """Events cached 5 minutes ago (default interval=120) should skip fetch_events."""
+        cfg = Config()
+        recent_ts = datetime.now() - timedelta(minutes=5)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("events", [], recent_ts, tmpdir)
+            with patch("src.main.fetch_events") as mock_events, \
+                 patch("src.main.fetch_weather", return_value=_make_weather()), \
+                 patch("src.main.fetch_birthdays", return_value=[]):
+                fetch_live_data(cfg, tmpdir)
+            mock_events.assert_not_called()
+
+    def test_birthdays_skipped_when_cache_is_fresh(self):
+        """Birthdays cached 1 hour ago (default interval=1440) should skip fetch_birthdays."""
+        cfg = Config()
+        recent_ts = datetime.now() - timedelta(hours=1)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_source("birthdays", [], recent_ts, tmpdir)
+            with patch("src.main.fetch_events", return_value=[]), \
+                 patch("src.main.fetch_weather", return_value=_make_weather()), \
+                 patch("src.main.fetch_birthdays") as mock_bdays:
+                fetch_live_data(cfg, tmpdir)
+            mock_bdays.assert_not_called()

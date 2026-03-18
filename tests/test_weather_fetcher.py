@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.config import WeatherConfig
-from src.fetchers.weather import fetch_weather, _pick_midday
+from src.fetchers.weather import deg_to_compass, fetch_weather, _pick_midday
 
 
 # ---------------------------------------------------------------------------
@@ -189,3 +189,60 @@ class TestPickMidday:
         assert result is not None  # 17 UTC = 12 EST
         result_utc = _pick_midday(slots)
         assert result_utc is None  # 17 UTC is not in (11,12,13,14) UTC
+
+
+# ---------------------------------------------------------------------------
+# deg_to_compass
+# ---------------------------------------------------------------------------
+
+class TestDegToCompass:
+    def test_north(self):
+        assert deg_to_compass(0) == "N"
+
+    def test_north_from_360(self):
+        assert deg_to_compass(360) == "N"
+
+    def test_northeast(self):
+        assert deg_to_compass(45) == "NE"
+
+    def test_east(self):
+        assert deg_to_compass(90) == "E"
+
+    def test_southeast(self):
+        assert deg_to_compass(135) == "SE"
+
+    def test_south(self):
+        assert deg_to_compass(180) == "S"
+
+    def test_southwest(self):
+        assert deg_to_compass(225) == "SW"
+
+    def test_west(self):
+        assert deg_to_compass(270) == "W"
+
+    def test_northwest(self):
+        assert deg_to_compass(315) == "NW"
+
+    def test_boundary_north_northeast(self):
+        # 22.5° is the midpoint between N and NE — rounds to NE (round half up)
+        result = deg_to_compass(22.5)
+        assert result in ("N", "NE")
+
+    def test_slightly_east_of_north(self):
+        assert deg_to_compass(23) == "NE"
+
+    def test_slightly_west_of_north(self):
+        assert deg_to_compass(337) == "NW"
+
+    def test_exactly_338_degrees(self):
+        # 338 / 45 = 7.5 → round to 8 → % 8 = 0 → N
+        assert deg_to_compass(338) == "N"
+
+    def test_wraps_correctly_over_360(self):
+        # 405 degrees == 45 degrees == NE
+        assert deg_to_compass(405) == "NE"
+
+    def test_all_cardinal_directions_covered(self):
+        cardinals = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"}
+        results = {deg_to_compass(i * 45) for i in range(8)}
+        assert results == cardinals
