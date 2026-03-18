@@ -17,7 +17,7 @@ A Python-based eInk dashboard for Raspberry Pi that displays your week's calenda
 - **Extended forecast** — up to 6 days of weather forecast data; small weather icons in each day's column header for a unified week-at-a-glance view
 - **Moon phase** — pure-math lunar phase calculation displayed next to the weather label — no API needed
 - **Birthdays** — upcoming birthdays from a local JSON file, Google Calendar events, or Google Contacts, shown with a countdown ("Today!", "Tomorrow", "in Nd")
-- **Daily quote** — deterministic daily rotation from a configurable quote pool (default pool of 86 quotes spanning sci-fi, science, philosophy, and wit)
+- **Daily quote** — deterministic daily rotation from a configurable quote pool (default pool of 125 quotes spanning sci-fi, science, philosophy, and wit)
 
 ### Data & Caching
 
@@ -106,8 +106,8 @@ Before starting, make sure you have the following installed on your development 
 ### 1. Clone and set up
 
 ```bash
-git clone https://github.com/gkoch02/Dashboard-v2.git
-cd Dashboard-v2
+git clone https://github.com/gkoch02/Dashboard-v3.git
+cd Dashboard-v3
 make setup
 ```
 
