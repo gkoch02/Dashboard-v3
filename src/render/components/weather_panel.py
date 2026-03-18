@@ -26,7 +26,7 @@ def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: 
     vline(draw, x0 + w - 1, y0, y0 + h)
 
     # Section label + moon phase icon
-    label_font = semibold(12)
+    label_font = bold(12)
     draw.text((x0 + pad, y0 + pad), "WEATHER", font=label_font, fill=BLACK)
 
     if today is not None:

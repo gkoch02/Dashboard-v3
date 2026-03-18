@@ -25,7 +25,7 @@ def draw_birthdays(draw: ImageDraw.ImageDraw, birthdays: list[Birthday], today: 
     vline(draw, x0 + w - 1, y0, y0 + h)
 
     # Section label
-    label_font = semibold(12)
+    label_font = bold(12)
     draw.text((x0 + pad, y0 + pad), "BIRTHDAYS", font=label_font, fill=BLACK)
 
     if not birthdays:
