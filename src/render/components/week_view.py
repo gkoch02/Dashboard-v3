@@ -4,8 +4,7 @@ from PIL import ImageDraw
 from src.data.models import CalendarEvent, DayForecast
 from src.render import layout as L
 from src.render.fonts import (
-    semibold, regular, bold, fraunces_bold,
-    barlow_condensed_semibold, barlow_condensed_medium,
+    semibold, regular, bold, medium,
 )
 from src.render.icons import draw_weather_icon
 from src.render.primitives import (
@@ -49,20 +48,20 @@ def _fonts_for_tier(tier: str) -> tuple:
     """
     if tier == "dense":
         return (
-            regular(9), barlow_condensed_medium(11),
-            barlow_condensed_semibold(11),
+            regular(9), medium(11),
+            semibold(11),
             2, 1, False, 4,
         )
     if tier == "compact":
         return (
-            regular(10), barlow_condensed_medium(12),
-            barlow_condensed_semibold(11),
+            regular(10), medium(12),
+            semibold(11),
             3, 1, False, 4,
         )
     # normal
     return (
-        regular(11), barlow_condensed_semibold(14),
-        barlow_condensed_semibold(13),
+        regular(11), semibold(14),
+        semibold(13),
         6, 2, True, 6,
     )
 
@@ -106,7 +105,7 @@ def draw_week(
     day_num_font = bold(14)
 
     date_section_h = L.WEEK_DATE_SECTION_H
-    date_section_font = fraunces_bold(100)
+    date_section_font = bold(100)
     date_y = body_top + body_h - date_section_h  # top of combined date cell
 
     # Saturday is col 5 (Mon=0 … Sat=5, Sun=6)
@@ -119,7 +118,7 @@ def draw_week(
     # --- Multi-day spanning event bars (rendered above per-day content) ---
     spanning = _collect_spanning_events(events, week_start, week_end)
     spanning_ids: set[str | None] = set()  # track which events are rendered as spanning
-    allday_font = barlow_condensed_semibold(13)
+    allday_font = semibold(13)
     span_bar_h = text_height(allday_font) + 6
     span_spacing = 2
     span_total_h = 0
@@ -248,7 +247,7 @@ def draw_week(
     vline(draw, sat_cx, date_y, y0 + L.WEEK_H - 1)
 
     # Combined "Today" cell — inverted month header, normal day number
-    month_font = fraunces_bold(33)
+    month_font = bold(33)
     month_text = today.strftime("%B").upper()
     mbb = draw.textbbox((0, 0), month_text, font=month_font)
     month_w = mbb[2] - mbb[0]
@@ -378,7 +377,7 @@ def _draw_day_events(
     allday_pad: int = 6,
 ):
     if allday_font is None:
-        allday_font = barlow_condensed_semibold(13)
+        allday_font = semibold(13)
 
     y = y_start + PAD + 1
     max_w = col_w - PAD * 2 - 1

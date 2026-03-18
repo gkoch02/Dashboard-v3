@@ -33,7 +33,7 @@ Dashboard/
 │   ├── config.example.yaml   # Configuration template — copy to config.yaml, never commit the real one
 │   └── quotes.json           # Optional daily-quote pool
 ├── credentials/              # Git-ignored — Google service account JSON lives here
-├── fonts/                    # Bundled TTF fonts (Inter, Plus Jakarta Sans, Weather Icons)
+├── fonts/                    # Bundled TTF fonts (Plus Jakarta Sans, Inter, Lora, Weather Icons)
 ├── output/                   # Mostly git-ignored — dry-run PNGs and logs written here
 │   └── latest.png            # Tracked exception: latest dry-run preview
 ├── src/
@@ -395,9 +395,9 @@ Default intervals: weather 30 min, events 120 min, birthdays 1440 min (24 hours)
 
 | Tier | Weekday trigger | Weekend trigger | Title font | Spacing |
 |------|----------------|-----------------|------------|---------|
-| Normal | ≤4 events | ≤2 events | Barlow Condensed SemiBold 14 | 6px |
-| Compact | 5–7 events | 3–4 events | Barlow Condensed Medium 12 | 3px |
-| Dense | ≥8 events | ≥5 events | Barlow Condensed Medium 11 | 2px |
+| Normal | ≤4 events | ≤2 events | Plus Jakarta Sans SemiBold 14 | 6px |
+| Compact | 5–7 events | 3–4 events | Plus Jakarta Sans Medium 12 | 3px |
+| Dense | ≥8 events | ≥5 events | Plus Jakarta Sans Medium 11 | 2px |
 
 Key functions: `_density_tier(event_count, is_weekend)` returns the tier string;
 `_fonts_for_tier(tier)` returns `(time_font, title_font, event_spacing, max_title_lines,
@@ -435,12 +435,8 @@ exceeds `google.daily_quota_warning` (default 500). Corrupted state files are si
 - Fonts are loaded with `@lru_cache` in `render/fonts.py`. Always use the loader; never
   open font files directly.
 - **Plus Jakarta Sans** — primary UI font (header, section labels, timestamps, weather
-  details). Fallback: **Inter**.
-- **Fraunces Bold** — display serif for the large weekend day number and month label.
-  Loaded as a variable font; `_get_variable_font()` sets `wght=700` via
-  `set_variation_by_axes()`.
-- **Barlow Condensed** (Medium, SemiBold) — condensed sans for event titles and all-day
-  event bars in the week view. Use SemiBold for white-on-black (inverted) bars.
+  details, event titles, all-day event bars, and the large date/month display).
+  Use SemiBold for white-on-black (inverted) bars. Fallback: **Inter**.
 - **Lora Italic** — editorial serif for the quote body in the info panel.
 - **weathericons-regular.ttf** — icon font; use character codes from `render/icons.py`.
 
