@@ -4,7 +4,7 @@ from PIL import ImageDraw
 from src.data.models import CalendarEvent, DayForecast
 from src.render import layout as L
 from src.render.fonts import (
-    semibold, regular, bold, medium,
+    semibold, regular, bold, medium, fraunces_bold,
 )
 from src.render.icons import draw_weather_icon
 from src.render.primitives import (
@@ -101,11 +101,11 @@ def draw_week(
     body_top = y0 + header_h
     body_h = L.WEEK_H - header_h
 
-    day_label_font = semibold(13)
-    day_num_font = bold(14)
+    day_label_font = semibold(11)
+    day_num_font = bold(16)
 
     date_section_h = L.WEEK_DATE_SECTION_H
-    date_section_font = bold(100)
+    date_section_font = fraunces_bold(100)
     date_y = body_top + body_h - date_section_h  # top of combined date cell
 
     # Saturday is col 5 (Mon=0 … Sat=5, Sun=6)
@@ -159,18 +159,19 @@ def draw_week(
         if is_today:
             # Inverted header for today
             filled_rect(draw, (cx, y0, cx + col_w - 1, y0 + header_h - 1), fill=BLACK)
-            fnt = bold(14)
+            fnt = bold(16)
             th = text_height(fnt)
             ty = y0 + (header_h - th) // 2
             draw.text((cx + PAD, ty), header_text, font=fnt, fill=WHITE)
         elif is_weekend:
             # Weekend: lighter styling — regular weight instead of semibold
-            wknd_font = regular(13)
-            th = text_height(wknd_font)
+            wknd_abbr_font = regular(11)
+            wknd_num_font = regular(16)
+            th = text_height(wknd_num_font)
             ty = y0 + (header_h - th) // 2
-            draw.text((cx + PAD, ty), day_abbr, font=wknd_font, fill=BLACK)
-            abbr_w = text_width(draw, day_abbr + " ", wknd_font)
-            draw.text((cx + PAD + abbr_w, ty), day_num, font=regular(14), fill=BLACK)
+            draw.text((cx + PAD, ty), day_abbr, font=wknd_abbr_font, fill=BLACK)
+            abbr_w = text_width(draw, day_abbr + " ", wknd_abbr_font)
+            draw.text((cx + PAD + abbr_w, ty), day_num, font=wknd_num_font, fill=BLACK)
         else:
             th = text_height(day_label_font)
             ty = y0 + (header_h - th) // 2
@@ -247,7 +248,7 @@ def draw_week(
     vline(draw, sat_cx, date_y, y0 + L.WEEK_H - 1)
 
     # Combined "Today" cell — inverted month header, normal day number
-    month_font = bold(33)
+    month_font = fraunces_bold(33)
     month_text = today.strftime("%B").upper()
     mbb = draw.textbbox((0, 0), month_text, font=month_font)
     month_w = mbb[2] - mbb[0]

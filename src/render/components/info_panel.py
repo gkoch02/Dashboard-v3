@@ -120,7 +120,7 @@ def draw_info(draw: ImageDraw.ImageDraw, today: date):
     )
 
     # Attribution
-    author_font = regular(13)
+    author_font = regular(12)
     attr_y = y + used_h + 6
     if attr_y + 16 < y0 + h:
         draw.text((x0 + pad, attr_y), f'— {quote["author"]}', font=author_font, fill=BLACK)
