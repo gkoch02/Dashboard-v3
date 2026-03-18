@@ -98,7 +98,7 @@ def draw_info(draw: ImageDraw.ImageDraw, today: date):
 
     # Section label
     label_font = semibold(12)
-    draw.text((x0 + pad, y0 + pad), "QUOTE", font=label_font, fill=BLACK)
+    draw.text((x0 + pad, y0 + pad), "QUOTE OF THE DAY", font=label_font, fill=BLACK)
 
     quote = _quote_for_today(today)
 
