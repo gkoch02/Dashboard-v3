@@ -4,7 +4,7 @@ from PIL import ImageDraw
 from src.data.models import CalendarEvent, DayForecast
 from src.render import layout as L
 from src.render.fonts import (
-    semibold, regular, bold, medium, fraunces_bold,
+    semibold, regular, bold, medium,
 )
 from src.render.icons import draw_weather_icon
 from src.render.primitives import (
@@ -105,7 +105,7 @@ def draw_week(
     day_num_font = bold(16)
 
     date_section_h = L.WEEK_DATE_SECTION_H
-    date_section_font = fraunces_bold(100)
+    date_section_font = bold(100)
     date_y = body_top + body_h - date_section_h  # top of combined date cell
 
     # Saturday is col 5 (Mon=0 … Sat=5, Sun=6)
@@ -248,7 +248,7 @@ def draw_week(
     vline(draw, sat_cx, date_y, y0 + L.WEEK_H - 1)
 
     # Combined "Today" cell — inverted month header, normal day number
-    month_font = fraunces_bold(33)
+    month_font = bold(33)
     month_text = today.strftime("%B").upper()
     mbb = draw.textbbox((0, 0), month_text, font=month_font)
     month_w = mbb[2] - mbb[0]
