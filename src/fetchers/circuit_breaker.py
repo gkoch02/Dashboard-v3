@@ -13,7 +13,7 @@ States:
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ class CircuitBreaker:
         """Record a failure; transition to OPEN after max_failures."""
         st = self._states.get(source, BreakerState())
         st.consecutive_failures += 1
-        st.last_failure_at = datetime.now().isoformat()
+        st.last_failure_at = datetime.now(timezone.utc).isoformat()
 
         if st.consecutive_failures >= self._max_failures:
             st.state = "open"
@@ -102,7 +102,12 @@ class CircuitBreaker:
             last = datetime.fromisoformat(st.last_failure_at)
         except ValueError:
             return True
-        age = (datetime.now() - last).total_seconds() / 60
+        # Use UTC for consistent cooldown calculation regardless of clock changes
+        now = datetime.now(timezone.utc)
+        # Handle legacy naive timestamps by assuming UTC
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        age = (now - last).total_seconds() / 60
         return age >= self._cooldown_minutes
 
     def _load(self) -> None:

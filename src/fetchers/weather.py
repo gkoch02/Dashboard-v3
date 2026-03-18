@@ -56,6 +56,11 @@ def fetch_weather(cfg: WeatherConfig, tz: tzinfo | None = None) -> WeatherData:
         if "sunset" in current["sys"]:
             sunset = datetime.fromtimestamp(current["sys"]["sunset"], tz=slot_tz)
 
+    if not current.get("weather"):
+        raise RuntimeError("OWM response missing 'weather' array")
+    if "main" not in current:
+        raise RuntimeError("OWM response missing 'main' object")
+
     return WeatherData(
         current_temp=current["main"]["temp"],
         current_icon=current["weather"][0]["icon"],

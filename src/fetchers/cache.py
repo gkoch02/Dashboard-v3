@@ -83,8 +83,9 @@ def load_cached_source(
     if not path.exists():
         return None
     try:
-        with open(path) as f:
-            raw = json.load(f)
+        with _cache_lock:
+            with open(path) as f:
+                raw = json.load(f)
     except Exception as exc:
         logger.warning("Cache read failed (%s): %s", path, exc)
         return None

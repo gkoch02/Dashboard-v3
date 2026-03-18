@@ -43,10 +43,19 @@ def draw_birthdays(draw: ImageDraw.ImageDraw, birthdays: list[Birthday], today: 
         if y + line_h > y0 + h - pad:
             break
 
-        # Countdown label
-        days_until = (bday.date.replace(year=today.year) - today).days
+        # Countdown label — handle Feb 29 birthdays in non-leap years
+        try:
+            next_bday = bday.date.replace(year=today.year)
+        except ValueError:
+            # Feb 29 in a non-leap year: use Feb 28 as the anniversary
+            next_bday = bday.date.replace(year=today.year, day=28)
+        days_until = (next_bday - today).days
         if days_until < 0:
-            days_until = (bday.date.replace(year=today.year + 1) - today).days
+            try:
+                next_bday = bday.date.replace(year=today.year + 1)
+            except ValueError:
+                next_bday = bday.date.replace(year=today.year + 1, day=28)
+            days_until = (next_bday - today).days
         is_today_bday = days_until == 0
         if is_today_bday:
             countdown = "Today!"

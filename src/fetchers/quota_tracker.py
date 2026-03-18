@@ -7,6 +7,7 @@ new calendar day.
 
 import json
 import logging
+import threading
 from datetime import date
 from pathlib import Path
 
@@ -22,18 +23,21 @@ class QuotaTracker:
         self._state_dir = Path(state_dir)
         self._today = date.today().isoformat()
         self._counts: dict[str, int] = {}
+        self._lock = threading.Lock()
         self._load()
 
     def record_call(self, source: str, count: int = 1) -> None:
         """Increment the daily call counter for *source*."""
-        self._ensure_today()
-        self._counts[source] = self._counts.get(source, 0) + count
-        self._save()
+        with self._lock:
+            self._ensure_today()
+            self._counts[source] = self._counts.get(source, 0) + count
+            self._save()
 
     def daily_count(self, source: str) -> int:
         """Return the number of API calls recorded for *source* today."""
-        self._ensure_today()
-        return self._counts.get(source, 0)
+        with self._lock:
+            self._ensure_today()
+            return self._counts.get(source, 0)
 
     def check_warning(self, source: str, threshold: int) -> bool:
         """Return True and log a warning if *source* exceeds *threshold*."""

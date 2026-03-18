@@ -150,7 +150,7 @@ def load_config(path: str = "config/config.yaml") -> Config:
             width=d.get("width", default_w),
             height=d.get("height", default_h),
             enable_partial_refresh=d.get("enable_partial_refresh", False),
-            max_partials_before_full=d.get("max_partials_before_full", 5),
+            max_partials_before_full=d.get("max_partials_before_full", 6),
             week_days=d.get("week_days", 7),
             show_weather=d.get("show_weather", True),
             show_birthdays=d.get("show_birthdays", True),
@@ -321,6 +321,31 @@ def validate_config(
             message=f"Invalid birthday source: '{cfg.birthdays.source}'",
             hint="Must be one of: file, calendar, contacts",
         ))
+
+    # --- Schedule ---
+    for label, val in [
+        ("schedule.quiet_hours_start", cfg.schedule.quiet_hours_start),
+        ("schedule.quiet_hours_end", cfg.schedule.quiet_hours_end),
+    ]:
+        if not (0 <= val <= 23):
+            errors.append(ConfigError(
+                field=label,
+                message=f"Invalid hour value: {val}",
+                hint="Must be an integer between 0 and 23.",
+            ))
+
+    # --- Cache fetch intervals ---
+    for label, val in [
+        ("cache.weather_fetch_interval", cfg.cache.weather_fetch_interval),
+        ("cache.events_fetch_interval", cfg.cache.events_fetch_interval),
+        ("cache.birthdays_fetch_interval", cfg.cache.birthdays_fetch_interval),
+    ]:
+        if val <= 0:
+            errors.append(ConfigError(
+                field=label,
+                message=f"Fetch interval must be positive, got {val}",
+                hint="Set a positive number of minutes.",
+            ))
 
     # --- Weather units ---
     if cfg.weather.units not in ("imperial", "metric", "standard"):

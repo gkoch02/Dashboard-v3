@@ -87,12 +87,20 @@ def _load_sync_state(cache_dir: str) -> dict:
 
 
 def _save_sync_state(state: dict, cache_dir: str) -> None:
-    """Persist per-calendar sync state."""
+    """Persist per-calendar sync state atomically."""
+    import os
+    import tempfile
     path = Path(cache_dir) / _SYNC_STATE_FILENAME
     try:
         Path(cache_dir).mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            json.dump(state, f, indent=2)
+        fd, tmp = tempfile.mkstemp(dir=cache_dir, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(state, f, indent=2)
+            os.replace(tmp, path)
+        except BaseException:
+            os.unlink(tmp)
+            raise
     except Exception as exc:
         logger.warning("Sync state write failed: %s", exc)
 
@@ -326,6 +334,9 @@ def _filter_to_window(
         if event.is_all_day:
             s = event.start.date() if isinstance(event.start, datetime) else event.start
             e = event.end.date() if isinstance(event.end, datetime) else event.end
+            # Google all-day events use exclusive end date (end = day after last
+            # day), so e > win_start_date correctly excludes events that ended
+            # before the window.
             if s < win_end_date and e > win_start_date:
                 result.append(event)
         else:
