@@ -34,28 +34,5 @@ def bold(size: int) -> ImageFont.FreeTypeFont:
     return get_font("PlusJakartaSans-Bold.ttf", size)
 
 
-def inter_bold(size: int) -> ImageFont.FreeTypeFont:
-    return get_font("Inter-Bold.ttf", size)
-
-
 def weather_icon(size: int) -> ImageFont.FreeTypeFont:
     return get_font("weathericons-regular.ttf", size)
-
-
-# Fraunces Bold — display serif for large day numbers
-def fraunces_bold(size: int) -> ImageFont.FreeTypeFont:
-    return _get_variable_font("Fraunces-Bold.ttf", size, 700)
-
-
-# Barlow Condensed — space-efficient sans for event titles
-def barlow_condensed_medium(size: int) -> ImageFont.FreeTypeFont:
-    return get_font("BarlowCondensed-Medium.ttf", size)
-
-
-def barlow_condensed_semibold(size: int) -> ImageFont.FreeTypeFont:
-    return get_font("BarlowCondensed-SemiBold.ttf", size)
-
-
-# Lora Italic — editorial serif for quotes
-def lora_italic(size: int) -> ImageFont.FreeTypeFont:
-    return get_font("Lora-Italic.ttf", size)

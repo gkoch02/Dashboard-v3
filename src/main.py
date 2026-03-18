@@ -486,7 +486,7 @@ def main():
 
     # Quiet hours — skip refresh entirely between quiet_hours_start and quiet_hours_end
     now = datetime.now(tz)
-    if _in_quiet_hours(now, cfg.schedule.quiet_hours_start, cfg.schedule.quiet_hours_end):
+    if not args.dry_run and _in_quiet_hours(now, cfg.schedule.quiet_hours_start, cfg.schedule.quiet_hours_end):
         logger.info(
             "Quiet hours (%02d:00–%02d:00) — skipping refresh",
             cfg.schedule.quiet_hours_start,
