@@ -160,24 +160,35 @@ def draw_week(
             # Inverted header for today
             filled_rect(draw, (cx, y0, cx + col_w - 1, y0 + header_h - 1), fill=BLACK)
             fnt = bold(16)
-            th = text_height(fnt)
-            ty = y0 + (header_h - th) // 2
-            draw.text((cx + PAD, ty), header_text, font=fnt, fill=WHITE)
+            num_bb = draw.textbbox((0, 0), day_num, font=fnt)
+            abbr_bb = draw.textbbox((0, 0), day_abbr, font=fnt)
+            num_ink_h = num_bb[3] - num_bb[1]
+            ty_num = y0 + (header_h - num_ink_h) // 2 - num_bb[1]
+            ty_abbr = ty_num + num_bb[3] - abbr_bb[3]
+            draw.text((cx + PAD, ty_abbr), day_abbr, font=fnt, fill=WHITE)
+            abbr_w = text_width(draw, day_abbr + " ", fnt)
+            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=WHITE)
         elif is_weekend:
             # Weekend: lighter styling — regular weight instead of semibold
             wknd_abbr_font = regular(11)
             wknd_num_font = regular(16)
-            th = text_height(wknd_num_font)
-            ty = y0 + (header_h - th) // 2
-            draw.text((cx + PAD, ty), day_abbr, font=wknd_abbr_font, fill=BLACK)
+            num_bb = draw.textbbox((0, 0), day_num, font=wknd_num_font)
+            abbr_bb = draw.textbbox((0, 0), day_abbr, font=wknd_abbr_font)
+            num_ink_h = num_bb[3] - num_bb[1]
+            ty_num = y0 + (header_h - num_ink_h) // 2 - num_bb[1]
+            ty_abbr = ty_num + num_bb[3] - abbr_bb[3]
+            draw.text((cx + PAD, ty_abbr), day_abbr, font=wknd_abbr_font, fill=BLACK)
             abbr_w = text_width(draw, day_abbr + " ", wknd_abbr_font)
-            draw.text((cx + PAD + abbr_w, ty), day_num, font=wknd_num_font, fill=BLACK)
+            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=wknd_num_font, fill=BLACK)
         else:
-            th = text_height(day_label_font)
-            ty = y0 + (header_h - th) // 2
-            draw.text((cx + PAD, ty), day_abbr, font=day_label_font, fill=BLACK)
+            num_bb = draw.textbbox((0, 0), day_num, font=day_num_font)
+            abbr_bb = draw.textbbox((0, 0), day_abbr, font=day_label_font)
+            num_ink_h = num_bb[3] - num_bb[1]
+            ty_num = y0 + (header_h - num_ink_h) // 2 - num_bb[1]
+            ty_abbr = ty_num + num_bb[3] - abbr_bb[3]
+            draw.text((cx + PAD, ty_abbr), day_abbr, font=day_label_font, fill=BLACK)
             abbr_w = text_width(draw, day_abbr + " ", day_label_font)
-            draw.text((cx + PAD + abbr_w, ty), day_num, font=day_num_font, fill=BLACK)
+            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=day_num_font, fill=BLACK)
 
         # Small forecast icon in column header (between day label and busy dots)
         fc = forecast_by_date.get(day)
