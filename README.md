@@ -286,13 +286,31 @@ This rsyncs the project to `~/home-dashboard/` on the Pi (expects `pi@raspberryp
 SSH into the Pi, then:
 
 ```bash
+sudo apt install swig liblgpio-dev
 cd ~/home-dashboard
 make setup
+venv/bin/pip install -r requirements-pi.txt
 ```
 
-`make setup` creates the `venv/` virtualenv, installs all core dependencies, and — because it detects it's running on a Raspberry Pi — automatically installs the Pi-specific hardware packages (`RPi.GPIO`, `spidev`) as well.
+`make setup` creates the `venv/` virtualenv and installs all core dependencies. The `apt` packages are required by the GPIO/SPI libraries. The final pip step installs the Pi-specific hardware packages (`RPi.GPIO`, `spidev`).
 
-### Step 4 — Run once to verify
+### Step 4 — Install Waveshare display drivers
+
+> **Important:** The Waveshare eInk display drivers are not published on PyPI and cannot be installed with a plain `pip install waveshare_epd`. They must be cloned directly from Waveshare's GitHub repository and installed from the local source tree.
+
+```bash
+git clone https://github.com/waveshare/e-Paper ~/e-Paper
+cd ~/home-dashboard
+venv/bin/pip install ~/e-Paper/RaspberryPi_JetsonNano/python/
+```
+
+Verify the install worked:
+
+```bash
+venv/bin/python -c "import waveshare_epd; print('waveshare_epd OK')"
+```
+
+### Step 5 — Run once to verify
 
 ```bash
 venv/bin/python -m src.main --config config/config.yaml
@@ -300,7 +318,7 @@ venv/bin/python -m src.main --config config/config.yaml
 
 The display should update. If it doesn't, check that SPI is enabled and the ribbon cable is seated.
 
-### Step 5 — Install the systemd timer
+### Step 6 — Install the systemd timer
 
 The project ships with `deploy/dashboard.service` and `deploy/dashboard.timer` which run the dashboard every 30 minutes and handle logging automatically. From your development machine:
 
