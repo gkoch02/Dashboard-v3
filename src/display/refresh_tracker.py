@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -48,4 +50,12 @@ class RefreshTracker:
             "partial_count": self.partial_count,
             "last_full": self.last_full.isoformat() if self.last_full else None,
         }
-        STATE_FILE.write_text(json.dumps(data))
+        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=STATE_FILE.parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(data, f)
+            os.replace(tmp, STATE_FILE)
+        except BaseException:
+            os.unlink(tmp)
+            raise

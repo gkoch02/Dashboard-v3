@@ -603,7 +603,7 @@ class TestSaveSyncStateException:
         import logging
         with tempfile.TemporaryDirectory() as tmpdir:
             with caplog.at_level(logging.WARNING, logger="src.fetchers.calendar"):
-                with patch("builtins.open", side_effect=OSError("disk full")):
+                with patch("tempfile.mkstemp", side_effect=OSError("disk full")):
                     _save_sync_state({"primary": {}}, tmpdir)
         assert "Sync state write failed" in caplog.text
 

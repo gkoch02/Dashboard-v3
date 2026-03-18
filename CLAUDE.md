@@ -155,7 +155,8 @@ resampling (in `canvas.py`) — components never need to know the target display
 
 - Always render a **1-bit image** (`mode="1"` or convert before displaying).
 - Partial refreshes degrade display quality over time. `RefreshTracker` enforces a
-  configurable full-refresh cycle — do not bypass it.
+  configurable full-refresh cycle — do not bypass it. State is persisted atomically
+  (temp file + `os.replace`) to survive crash-during-write.
 - Hardware imports (`waveshare_epd`, `RPi.GPIO`, `spidev`) must be **lazy** (imported
   inside the `WaveshareDisplay` class/methods) so the codebase runs on non-Pi machines.
 - `WaveshareDisplay` uses `importlib.import_module()` to load the correct per-model driver
@@ -179,10 +180,11 @@ resampling (in `canvas.py`) — components never need to know the target display
   and threaded through all fetchers and `generate_dummy_data` so that `date.today()` /
   `datetime.now()` consistently reflect the configured location rather than the server clock.
 - `schedule.quiet_hours_start` / `schedule.quiet_hours_end` (defaults `23` / `6`) define the
-  overnight quiet window. `ScheduleConfig` lives in `config.py`. `main.py` checks
-  `_in_quiet_hours()` immediately after resolving the timezone and returns early if the
-  current time falls in the window. The first run each morning (`_is_morning_startup()`)
-  forces a full eInk refresh.
+  overnight quiet window. Both must be integers in the range `[0, 23]` —
+  `validate_config()` flags invalid values as errors. `ScheduleConfig` lives in `config.py`.
+  `main.py` checks `_in_quiet_hours()` immediately after resolving the timezone and returns
+  early if the current time falls in the window. The first run each morning
+  (`_is_morning_startup()`) forces a full eInk refresh.
 - `title` is a top-level string (default `"Home Dashboard"`) displayed in the header bar.
   Set `title: "My Dashboard"` in `config.yaml` to customise it.
 - `google.contacts_email` is required when `birthdays.source` is `"contacts"`. The service
@@ -192,7 +194,8 @@ resampling (in `canvas.py`) — components never need to know the target display
 - `CacheConfig` (`cache:` section) controls per-source TTLs (`weather_ttl_minutes`,
   `events_ttl_minutes`, `birthdays_ttl_minutes`), per-source fetch intervals
   (`weather_fetch_interval`, `events_fetch_interval`, `birthdays_fetch_interval`), and
-  circuit breaker settings (`max_failures`, `cooldown_minutes`).
+  circuit breaker settings (`max_failures`, `cooldown_minutes`). All fetch intervals must
+  be positive — `validate_config()` flags zero or negative values as errors.
 - `FilterConfig` (`filters:` section) controls event filtering: `exclude_calendars`,
   `exclude_keywords`, `exclude_all_day`. Filters run between fetch and render so the cache
   retains all events for incremental sync correctness.
@@ -215,7 +218,11 @@ per-source buckets so each data source can fail and recover independently:
 ```
 
 - `save_source(source, data, fetched_at, cache_dir)` — writes one bucket without touching others.
+  Uses `_atomic_write_json()` (temp file + `os.replace`) for crash safety.
 - `load_cached_source(source, cache_dir)` — returns `(data, fetched_at)` or `None`.
+  Acquires `_cache_lock` for thread safety with concurrent writers.
+- Both `save_source` and `load_cached_source` are thread-safe — critical because
+  `fetch_live_data()` runs three fetchers in parallel via `ThreadPoolExecutor`.
 - v1 files (no `schema_version`) are transparently migrated via `_deserialise_v1()`.
 - `DashboardData.stale_sources: list[str]` lists which sources came from cache (e.g. `["weather"]`).
 
@@ -230,10 +237,17 @@ Key functions:
 - `_fetch_incremental()` — uses the stored token; returns `needs_reset=True` on HTTP 410 Gone.
 - `_apply_delta()` — merges add/update/cancel items into the stored event list by `event_id`.
 - `_filter_to_window()` — filters the merged store to the current display week client-side.
+  All-day events use Google's exclusive end-date convention (end = day after last day);
+  the boundary check `e > win_start_date` correctly handles this.
+- `_save_sync_state()` writes atomically via temp file + `os.replace` for crash safety.
 
 `CalendarEvent.event_id` (optional `str`) holds the Google event ID used for delta merging.
 
 ### Weather Alerts
+
+`fetch_weather()` validates that the OWM current-weather response contains the required
+`"main"` and `"weather"` keys before accessing them, raising a descriptive `RuntimeError`
+on malformed responses rather than an opaque `KeyError` or `IndexError`.
 
 `fetchers/weather.py` makes a best-effort call to the OWM OneCall 2.5 endpoint
 (`/data/2.5/onecall?exclude=minutely,hourly,daily`) after the main weather fetch. The call
@@ -403,6 +417,10 @@ limit titles to 1 line.
   Success → CLOSED. Failure → OPEN again.
 
 State is persisted to `/tmp/dashboard_breaker_state.json` (same pattern as `RefreshTracker`).
+All timestamps are stored in UTC (`datetime.now(timezone.utc)`) so cooldown behaviour is
+immune to DST transitions and NTP clock corrections. Legacy state files with naive
+timestamps are treated as UTC on read.
+
 `main.py` checks `breaker.should_attempt(source)` before each fetch and calls
 `record_success`/`record_failure` after.
 
@@ -411,8 +429,8 @@ State is persisted to `/tmp/dashboard_breaker_state.json` (same pattern as `Refr
 `fetchers/quota_tracker.py` provides a lightweight daily request counter per source.
 State is persisted to `output/api_quota_state.json` with a date key that auto-resets daily.
 
-- `QuotaTracker.record_call(source, count=1)` — increment the counter
-- `QuotaTracker.daily_count(source)` — current count for today
+- `QuotaTracker.record_call(source, count=1)` — increment the counter (thread-safe)
+- `QuotaTracker.daily_count(source)` — current count for today (thread-safe)
 - `QuotaTracker.check_warning(source, threshold)` — True if count exceeds threshold
 
 `main.py` checks the quota after each successful fetch and logs a warning if the daily count
@@ -482,7 +500,7 @@ Wilde, Twain, and others. Each entry is `{"text": "...", "author": "..."}`.
 make test          # pytest tests/ -v
 ```
 
-Twenty-two test files live in `tests/` (526 tests total):
+Twenty-three test files live in `tests/` (541 tests total):
 
 | File | What it covers |
 |---|---|
@@ -509,6 +527,7 @@ Twenty-two test files live in `tests/` (526 tests total):
 | `test_filters.py` | Event filtering: each filter type, case insensitivity, combined filters, None calendar_name, empty list |
 | `test_circuit_breaker.py` | Circuit breaker state transitions: closed→open→half_open→closed, half-open probe paths, cooldown edge cases, persistence |
 | `test_quota_tracker.py` | Quota tracker: daily count, auto-reset on new day, warning threshold, persistence, corrupted state, live-instance day rollover |
+| `test_bugfixes.py` | Regression tests: config default consistency, OWM empty-response guards, Feb 29 birthday rendering, circuit breaker UTC timestamps, quiet hours / fetch interval validation |
 
 Use `--dummy` mode and `DryRunDisplay` to test rendering without hardware or live APIs.
 
