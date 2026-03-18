@@ -54,5 +54,22 @@ output:
 logging:
   level: "INFO"
 
+# Cache TTL — controls how long cached data is considered usable after a fetch failure.
+# Data older than 4x the TTL is discarded entirely (EXPIRED).
+# cache:
+#   weather_ttl_minutes: 60       # 1 hour
+#   events_ttl_minutes: 120       # 2 hours
+#   birthdays_ttl_minutes: 1440   # 24 hours
+#   # Fetch intervals — skip API calls when cached data is younger than this
+#   weather_fetch_interval: 30    # 30 minutes
+#   events_fetch_interval: 120    # 2 hours
+#   birthdays_fetch_interval: 1440  # 24 hours
+
+# Event filtering — hide events from the display without removing them from cache.
+# filters:
+#   exclude_calendars: ["Holidays", "Spam Calendar"]
+#   exclude_keywords: ["OOO", "Block", "Focus Time"]
+#   exclude_all_day: false
+
 # Dashboard title displayed in the header bar.
 # title: "Home Dashboard"

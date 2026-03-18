@@ -1,6 +1,15 @@
 from dataclasses import dataclass, field
 from datetime import datetime, date
+from enum import Enum
 from typing import Optional
+
+
+class StalenessLevel(Enum):
+    """Age-based staleness level for cached data relative to its TTL."""
+    FRESH = "fresh"       # within TTL
+    AGING = "aging"       # 1-2x TTL
+    STALE = "stale"       # 2-4x TTL
+    EXPIRED = "expired"   # >4x TTL — data should not be used
 
 
 @dataclass
@@ -41,6 +50,9 @@ class WeatherData:
     alerts: list[WeatherAlert] = field(default_factory=list)
     feels_like: Optional[float] = None
     wind_speed: Optional[float] = None    # speed in configured units (mph or m/s)
+    wind_deg: Optional[float] = None      # wind direction in degrees (0=N, 90=E, etc.)
+    pressure: Optional[float] = None      # atmospheric pressure in hPa
+    uv_index: Optional[float] = None      # UV index (0-11+)
     sunrise: Optional[datetime] = None
     sunset: Optional[datetime] = None
 
@@ -60,3 +72,4 @@ class DashboardData:
     fetched_at: datetime = field(default_factory=datetime.now)
     is_stale: bool = False  # True when any component was filled from cache
     stale_sources: list[str] = field(default_factory=list)  # e.g. ["events", "weather"]
+    source_staleness: dict[str, StalenessLevel] = field(default_factory=dict)

@@ -6,10 +6,14 @@ from datetime import datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 
 from src.config import load_config, validate_config, print_validation_report
+from src.filters import filter_events
 from src.data.models import (
-    DashboardData, CalendarEvent, WeatherData, DayForecast, WeatherAlert, Birthday,
+    DashboardData, CalendarEvent, StalenessLevel, WeatherData,
+    DayForecast, WeatherAlert, Birthday,
 )
-from src.fetchers.cache import load_cached_source, save_source
+from src.fetchers.cache import check_staleness, load_cached_source, save_source
+from src.fetchers.circuit_breaker import CircuitBreaker
+from src.fetchers.quota_tracker import QuotaTracker
 from src.fetchers.calendar import fetch_events, fetch_birthdays
 from src.fetchers.weather import fetch_weather
 from src.render.canvas import render_dashboard
@@ -154,6 +158,9 @@ def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
         alerts=[WeatherAlert(event="Dense Fog Advisory")],
         feels_like=38.0,
         wind_speed=12.0,
+        wind_deg=315.0,
+        pressure=1013.0,
+        uv_index=5.0,
         sunrise=datetime.combine(
             today, datetime.min.time().replace(hour=6, minute=24)
         ).replace(tzinfo=dummy_tz),
@@ -175,68 +182,189 @@ def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
     )
 
 
-def fetch_live_data(cfg, cache_dir: str, tz: tzinfo | None = None) -> DashboardData:
-    """Fetch live data from all APIs in parallel, falling back to per-source cache on failure."""
+def fetch_live_data(
+    cfg, cache_dir: str, tz: tzinfo | None = None,
+    force_refresh: bool = False,
+) -> DashboardData:
+    """Fetch live data from all APIs in parallel, falling back to per-source cache on failure.
+
+    When *force_refresh* is True, fetch intervals are bypassed and all sources
+    are fetched fresh.
+    """
     events: list[CalendarEvent] = []
     weather: WeatherData | None = None
     birthdays: list[Birthday] = []
 
     stale_sources: list[str] = []
+    source_staleness: dict[str, StalenessLevel] = {}
     fetched_at = datetime.now(tz) if tz is not None else datetime.now()
 
-    # Launch all fetchers concurrently — they are independent network calls
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        events_future: Future = pool.submit(
-            _retry_fetch, "Calendar",
-            lambda: fetch_events(cfg.google, tz=tz, cache_dir=cache_dir),
-        )
-        weather_future: Future = pool.submit(
-            _retry_fetch, "Weather",
-            lambda: fetch_weather(cfg.weather, tz=tz),
-        )
-        birthdays_future: Future = pool.submit(
-            _retry_fetch, "Birthdays",
-            lambda: fetch_birthdays(cfg.google, cfg.birthdays, tz=tz),
-        )
+    cache_cfg = cfg.cache
+    quota = QuotaTracker(state_dir=cache_dir)
+    breaker = CircuitBreaker(
+        max_failures=cache_cfg.max_failures,
+        cooldown_minutes=cache_cfg.cooldown_minutes,
+        state_dir=cache_dir,
+    )
+    ttl_map = {
+        "events": cache_cfg.events_ttl_minutes,
+        "weather": cache_cfg.weather_ttl_minutes,
+        "birthdays": cache_cfg.birthdays_ttl_minutes,
+    }
+    interval_map = {
+        "events": cache_cfg.events_fetch_interval,
+        "weather": cache_cfg.weather_fetch_interval,
+        "birthdays": cache_cfg.birthdays_fetch_interval,
+    }
+
+    def _use_cache(source: str):
+        """Try to load cached data; apply TTL-based staleness check."""
+        cached = load_cached_source(source, cache_dir)
+        if cached is None:
+            return None
+        data, cached_at = cached
+        level = check_staleness(cached_at, ttl_map[source], now=fetched_at)
+        if level == StalenessLevel.EXPIRED:
+            logger.warning("Cached %s is expired (>%dx TTL), discarding",
+                           source, 4)
+            return None
+        source_staleness[source] = level
+        stale_sources.append(source)
+        return data
+
+    def _cache_is_recent(source: str) -> tuple:
+        """Check if cached data is young enough to skip fetching.
+
+        Returns ``(data, True)`` when the source can be reused, or
+        ``(None, False)`` when a fresh fetch is needed.
+        """
+        if force_refresh:
+            return None, False
+        cached = load_cached_source(source, cache_dir)
+        if cached is None:
+            return None, False
+        data, cached_at = cached
+        age_minutes = (fetched_at - cached_at).total_seconds() / 60
+        interval = interval_map[source]
+        if age_minutes < interval:
+            logger.info(
+                "%s data is %.0fm old (interval: %dm), skipping fetch",
+                source, age_minutes, interval,
+            )
+            source_staleness[source] = StalenessLevel.FRESH
+            return data, True
+        return None, False
+
+    # Check fetch intervals and circuit breaker — skip sources as needed
+    def _should_skip(source: str) -> tuple:
+        """Determine if a source should be skipped (interval or breaker).
+
+        Returns ``(data, True)`` to skip, ``(None, False)`` to fetch.
+        """
+        # Check fetch interval first
+        data, recent = _cache_is_recent(source)
+        if recent:
+            return data, True
+        # Check circuit breaker
+        if not breaker.should_attempt(source):
+            logger.info("Circuit breaker OPEN for %s, using cache", source)
+            cached_data = _use_cache(source)
+            return cached_data, True
+        return None, False
+
+    events_cached, events_skip = _should_skip("events")
+    weather_cached, weather_skip = _should_skip("weather")
+    birthdays_cached, birthdays_skip = _should_skip("birthdays")
+
+    if events_skip:
+        events = events_cached
+    if weather_skip:
+        weather = weather_cached
+    if birthdays_skip:
+        birthdays = birthdays_cached
+
+    # Launch fetchers only for sources that need refreshing
+    events_future: Future | None = None
+    weather_future: Future | None = None
+    birthdays_future: Future | None = None
+
+    needs_fetch = not events_skip or not weather_skip or not birthdays_skip
+    if needs_fetch:
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            if not events_skip:
+                events_future = pool.submit(
+                    _retry_fetch, "Calendar",
+                    lambda: fetch_events(cfg.google, tz=tz, cache_dir=cache_dir),
+                )
+            if not weather_skip:
+                weather_future = pool.submit(
+                    _retry_fetch, "Weather",
+                    lambda: fetch_weather(cfg.weather, tz=tz),
+                )
+            if not birthdays_skip:
+                birthdays_future = pool.submit(
+                    _retry_fetch, "Birthdays",
+                    lambda: fetch_birthdays(cfg.google, cfg.birthdays, tz=tz),
+                )
 
     # --- Calendar events ---
-    try:
-        events = events_future.result(timeout=120)
-        save_source("events", events, fetched_at, cache_dir)
-        logger.info("Fetched %d calendar events", len(events))
-    except Exception as exc:
-        logger.error("Calendar fetch failed: %s", exc)
-        cached = load_cached_source("events", cache_dir)
-        if cached is not None:
-            events, _ = cached
-            stale_sources.append("events")
-            logger.warning("Using cached events")
+    if events_future is not None:
+        try:
+            events = events_future.result(timeout=120)
+            save_source("events", events, fetched_at, cache_dir)
+            source_staleness["events"] = StalenessLevel.FRESH
+            breaker.record_success("events")
+            quota.record_call("events")
+            logger.info("Fetched %d calendar events", len(events))
+        except Exception as exc:
+            logger.error("Calendar fetch failed: %s", exc)
+            breaker.record_failure("events")
+            cached_data = _use_cache("events")
+            if cached_data is not None:
+                events = cached_data
+                logger.warning("Using cached events (%s)",
+                               source_staleness["events"].value)
 
     # --- Weather ---
-    try:
-        weather = weather_future.result(timeout=120)
-        save_source("weather", weather, fetched_at, cache_dir)
-        logger.info("Fetched weather: %.1f°", weather.current_temp)
-    except Exception as exc:
-        logger.error("Weather fetch failed: %s", exc)
-        cached = load_cached_source("weather", cache_dir)
-        if cached is not None:
-            weather, _ = cached
-            stale_sources.append("weather")
-            logger.warning("Using cached weather")
+    if weather_future is not None:
+        try:
+            weather = weather_future.result(timeout=120)
+            save_source("weather", weather, fetched_at, cache_dir)
+            source_staleness["weather"] = StalenessLevel.FRESH
+            breaker.record_success("weather")
+            quota.record_call("weather")
+            logger.info("Fetched weather: %.1f°", weather.current_temp)
+        except Exception as exc:
+            logger.error("Weather fetch failed: %s", exc)
+            breaker.record_failure("weather")
+            cached_data = _use_cache("weather")
+            if cached_data is not None:
+                weather = cached_data
+                logger.warning("Using cached weather (%s)",
+                               source_staleness["weather"].value)
 
     # --- Birthdays ---
-    try:
-        birthdays = birthdays_future.result(timeout=120)
-        save_source("birthdays", birthdays, fetched_at, cache_dir)
-        logger.info("Fetched %d upcoming birthdays", len(birthdays))
-    except Exception as exc:
-        logger.error("Birthday fetch failed: %s", exc)
-        cached = load_cached_source("birthdays", cache_dir)
-        if cached is not None:
-            birthdays, _ = cached
-            stale_sources.append("birthdays")
-            logger.warning("Using cached birthdays")
+    if birthdays_future is not None:
+        try:
+            birthdays = birthdays_future.result(timeout=120)
+            save_source("birthdays", birthdays, fetched_at, cache_dir)
+            source_staleness["birthdays"] = StalenessLevel.FRESH
+            breaker.record_success("birthdays")
+            quota.record_call("birthdays")
+            logger.info("Fetched %d upcoming birthdays", len(birthdays))
+        except Exception as exc:
+            logger.error("Birthday fetch failed: %s", exc)
+            breaker.record_failure("birthdays")
+            cached_data = _use_cache("birthdays")
+            if cached_data is not None:
+                birthdays = cached_data
+                logger.warning("Using cached birthdays (%s)",
+                               source_staleness["birthdays"].value)
+
+    # Check quota warnings
+    quota_threshold = cfg.google.daily_quota_warning
+    for src in ("events", "weather", "birthdays"):
+        quota.check_warning(src, quota_threshold)
 
     return DashboardData(
         events=events,
@@ -245,6 +373,7 @@ def fetch_live_data(cfg, cache_dir: str, tz: tzinfo | None = None) -> DashboardD
         fetched_at=fetched_at,
         is_stale=bool(stale_sources),
         stale_sources=stale_sources,
+        source_staleness=source_staleness,
     )
 
 
@@ -314,7 +443,16 @@ def main():
         logger.info("Using dummy data")
         data = generate_dummy_data(tz=tz)
     else:
-        data = fetch_live_data(cfg, cache_dir=cfg.output_dir, tz=tz)
+        data = fetch_live_data(
+            cfg, cache_dir=cfg.output_dir, tz=tz,
+            force_refresh=force_full,
+        )
+
+    # Apply event filters
+    if cfg.filters.exclude_calendars or cfg.filters.exclude_keywords or cfg.filters.exclude_all_day:
+        original_count = len(data.events)
+        data.events = filter_events(data.events, cfg.filters)
+        logger.info("Filtered events: %d -> %d", original_count, len(data.events))
 
     # Render
     logger.info("Rendering dashboard")

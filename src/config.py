@@ -15,6 +15,7 @@ class GoogleConfig:
     # Email of the user to impersonate via domain-wide delegation for Contacts access.
     # Required when birthdays.source is "contacts".
     contacts_email: str = ""
+    daily_quota_warning: int = 500  # warn when daily API calls exceed this
 
 
 @dataclass
@@ -54,12 +55,35 @@ class ScheduleConfig:
 
 
 @dataclass
+class CacheConfig:
+    weather_ttl_minutes: int = 60
+    events_ttl_minutes: int = 120
+    birthdays_ttl_minutes: int = 1440
+    # Per-source fetch intervals: skip fetching if cached data is younger
+    weather_fetch_interval: int = 30       # minutes between weather API calls
+    events_fetch_interval: int = 120       # minutes between calendar API calls
+    birthdays_fetch_interval: int = 1440   # minutes between birthday API calls
+    # Circuit breaker: stop hitting an API after repeated failures
+    max_failures: int = 3                  # consecutive failures before opening breaker
+    cooldown_minutes: int = 30             # minutes to wait before retrying
+
+
+@dataclass
+class FilterConfig:
+    exclude_calendars: list[str] = field(default_factory=list)
+    exclude_keywords: list[str] = field(default_factory=list)
+    exclude_all_day: bool = False
+
+
+@dataclass
 class Config:
     google: GoogleConfig = field(default_factory=GoogleConfig)
     weather: WeatherConfig = field(default_factory=WeatherConfig)
     birthdays: BirthdayConfig = field(default_factory=BirthdayConfig)
     display: DisplayConfig = field(default_factory=DisplayConfig)
     schedule: ScheduleConfig = field(default_factory=ScheduleConfig)
+    filters: FilterConfig = field(default_factory=FilterConfig)
+    cache: CacheConfig = field(default_factory=CacheConfig)
     title: str = "Home Dashboard"
     output_dir: str = "output"
     log_level: str = "INFO"
@@ -88,6 +112,7 @@ def load_config(path: str = "config/config.yaml") -> Config:
             calendar_id=g.get("calendar_id", cfg.google.calendar_id),
             additional_calendars=g.get("additional_calendars", []),
             contacts_email=g.get("contacts_email", ""),
+            daily_quota_warning=g.get("daily_quota_warning", 500),
         )
 
     if "weather" in raw:
@@ -138,6 +163,27 @@ def load_config(path: str = "config/config.yaml") -> Config:
         cfg.schedule = ScheduleConfig(
             quiet_hours_start=s.get("quiet_hours_start", 23),
             quiet_hours_end=s.get("quiet_hours_end", 6),
+        )
+
+    if "cache" in raw:
+        ca = raw["cache"]
+        cfg.cache = CacheConfig(
+            weather_ttl_minutes=ca.get("weather_ttl_minutes", 60),
+            events_ttl_minutes=ca.get("events_ttl_minutes", 120),
+            birthdays_ttl_minutes=ca.get("birthdays_ttl_minutes", 1440),
+            weather_fetch_interval=ca.get("weather_fetch_interval", 30),
+            events_fetch_interval=ca.get("events_fetch_interval", 120),
+            birthdays_fetch_interval=ca.get("birthdays_fetch_interval", 1440),
+            max_failures=ca.get("max_failures", 3),
+            cooldown_minutes=ca.get("cooldown_minutes", 30),
+        )
+
+    if "filters" in raw:
+        fl = raw["filters"]
+        cfg.filters = FilterConfig(
+            exclude_calendars=fl.get("exclude_calendars", []),
+            exclude_keywords=fl.get("exclude_keywords", []),
+            exclude_all_day=fl.get("exclude_all_day", False),
         )
 
     if "output" in raw:

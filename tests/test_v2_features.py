@@ -178,17 +178,18 @@ class TestWeatherAlerts:
         assert w.alerts == []
 
     def test_fetch_alerts_returns_empty_on_failure(self):
-        """_fetch_alerts must silently return [] on any HTTP error."""
-        from src.fetchers.weather import _fetch_alerts
+        """_fetch_alerts_and_uv must silently return ([], None) on any HTTP error."""
+        from src.fetchers.weather import _fetch_alerts_and_uv
         params = {"lat": 0, "lon": 0, "appid": "key", "units": "imperial"}
         session = MagicMock()
         session.get.side_effect = Exception("network")
-        result = _fetch_alerts(session, params)
-        assert result == []
+        alerts, uv = _fetch_alerts_and_uv(session, params)
+        assert alerts == []
+        assert uv is None
 
     def test_fetch_alerts_parses_response(self):
-        """_fetch_alerts should parse event names from a valid response."""
-        from src.fetchers.weather import _fetch_alerts
+        """_fetch_alerts_and_uv should parse event names from a valid response."""
+        from src.fetchers.weather import _fetch_alerts_and_uv
         params = {"lat": 0, "lon": 0, "appid": "key", "units": "imperial"}
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
@@ -196,26 +197,28 @@ class TestWeatherAlerts:
             "alerts": [
                 {"event": "Dense Fog Advisory", "description": "..."},
                 {"event": "Winter Storm Warning", "description": "..."},
-            ]
+            ],
+            "current": {"uvi": 6.5},
         }
         session = MagicMock()
         session.get.return_value = mock_resp
-        result = _fetch_alerts(session, params)
-        assert len(result) == 2
-        assert result[0].event == "Dense Fog Advisory"
-        assert result[1].event == "Winter Storm Warning"
+        alerts, uv = _fetch_alerts_and_uv(session, params)
+        assert len(alerts) == 2
+        assert alerts[0].event == "Dense Fog Advisory"
+        assert alerts[1].event == "Winter Storm Warning"
+        assert uv == 6.5
 
     def test_fetch_alerts_skips_empty_event_names(self):
-        from src.fetchers.weather import _fetch_alerts
+        from src.fetchers.weather import _fetch_alerts_and_uv
         params = {"lat": 0, "lon": 0, "appid": "key", "units": "imperial"}
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
         mock_resp.json.return_value = {"alerts": [{"event": "  "}, {"event": "Real Alert"}]}
         session = MagicMock()
         session.get.return_value = mock_resp
-        result = _fetch_alerts(session, params)
-        assert len(result) == 1
-        assert result[0].event == "Real Alert"
+        alerts, uv = _fetch_alerts_and_uv(session, params)
+        assert len(alerts) == 1
+        assert alerts[0].event == "Real Alert"
 
     def test_fetch_weather_includes_alerts(self):
         """Full fetch_weather call includes alerts in the returned WeatherData."""
@@ -374,8 +377,9 @@ class TestPerSourceCache:
         from src.main import fetch_live_data
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Pre-populate cache for weather
-            save_source("weather", _make_weather(), datetime(2024, 3, 14, 9), tmpdir)
+            # Pre-populate cache for weather (recent enough to be within TTL)
+            from datetime import timedelta
+            save_source("weather", _make_weather(), datetime.now() - timedelta(hours=3), tmpdir)
 
             with patch("src.main.fetch_events", return_value=[]), \
                  patch("src.main.fetch_weather", side_effect=RuntimeError("down")), \
