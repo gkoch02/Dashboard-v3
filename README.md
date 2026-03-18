@@ -115,11 +115,7 @@ make setup
 
 ### 2. Configure
 
-```bash
-cp config/config.example.yaml config/config.yaml
-```
-
-Open `config/config.yaml` in any text editor and fill in the values below. The Google fields require some setup — see the [Google Calendar Setup](#google-calendar-setup) section for step-by-step instructions.
+`make setup` creates `config/config.yaml` from the template automatically if one doesn't already exist. Open it in any text editor and fill in the values below. The Google fields require some setup — see the [Google Calendar Setup](#google-calendar-setup) section for step-by-step instructions.
 
 | Field | What to put here |
 |---|---|
@@ -418,7 +414,15 @@ All matching is case-insensitive and uses substring matching — `"Holiday"` mat
 
 ### Circuit Breaker
 
-The circuit breaker automatically backs off when an API fails repeatedly, preventing wasted requests and log noise. After 3 consecutive failures, the source is skipped for 30 minutes. A single successful "probe" request after cooldown resets the breaker. These defaults are not yet exposed in config but can be tuned in `src/config.py` (`CacheConfig.max_failures`, `CacheConfig.cooldown_minutes`).
+The circuit breaker automatically backs off when an API fails repeatedly, preventing wasted requests and log noise. After N consecutive failures, the source is skipped for a cooldown period. A single successful "probe" request after cooldown resets the breaker.
+
+Defaults can be tuned in `config/config.yaml`:
+
+```yaml
+cache:
+  max_failures: 3        # consecutive failures before opening the breaker
+  cooldown_minutes: 30   # minutes to wait before allowing a probe
+```
 
 ---
 
@@ -459,15 +463,12 @@ Dashboard/
 
 ## Typography
 
-The display uses four font families, each chosen for a specific role:
+The display uses two font families:
 
 | Font | Weight(s) | Used for |
 |---|---|---|
-| [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) | Regular, Medium, SemiBold, Bold | UI chrome — header, section labels, timestamps, weather details |
-| [Fraunces](https://fonts.google.com/specimen/Fraunces) | Bold (700) | Large weekend day number and month label in the calendar date cell |
-| [Barlow Condensed](https://fonts.google.com/specimen/Barlow+Condensed) | Medium, SemiBold | Event titles and all-day event bars in the week view |
-| [Lora](https://fonts.google.com/specimen/Lora) | Italic | Quote body text in the info panel |
-| Weather Icons | Regular | OWM condition icons |
+| [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) | Regular, Medium, SemiBold, Bold | All UI text — header, section labels, timestamps, event titles, weather details, birthday bar, date display, and quote text |
+| [Weather Icons](https://erikflowers.github.io/weather-icons/) | Regular | OWM weather condition icons and moon phase glyphs |
 
 ---
 

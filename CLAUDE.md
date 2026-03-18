@@ -8,20 +8,8 @@ This file provides context for AI assistants (Claude, etc.) working in this repo
 
 A Python-based **eInk dashboard** for Raspberry Pi that renders calendar events, weather
 forecasts, birthdays, and inspirational quotes to a supported Waveshare eInk display
-(black & white). All four implementation phases plus v2 and v3 features are complete and the
-application is production-ready. Multiple display sizes are supported via the
-`WAVESHARE_MODELS` registry in `display/driver.py`.
-
-**v2 features** (shipped): event location display, weather alerts (OWM OneCall), per-day
-busy-ness heatmap dots, per-source cache staleness tracking, and incremental Google Calendar
-sync via sync tokens.
-
-**v3 features** (shipped): parallel fetcher execution, conditional display refresh via image
-diffing, extended 6-day weather forecast with per-column forecast icons in the week view,
-moon phase display in the weather panel, multi-day spanning event bars, event filtering,
-enhanced weather data (wind compass direction, UV index, pressure), cache TTL with staleness
-gradation, per-source fetch intervals, adaptive event density, circuit breaker for flaky
-APIs, and API quota awareness.
+(black & white). The application is production-ready. Multiple display sizes are supported
+via the `WAVESHARE_MODELS` registry in `display/driver.py`.
 
 ---
 
@@ -33,7 +21,7 @@ Dashboard/
 │   ├── config.example.yaml   # Configuration template — copy to config.yaml, never commit the real one
 │   └── quotes.json           # Optional daily-quote pool
 ├── credentials/              # Git-ignored — Google service account JSON lives here
-├── fonts/                    # Bundled TTF fonts (Plus Jakarta Sans, Inter, Lora, Weather Icons)
+├── fonts/                    # Bundled TTF fonts (Plus Jakarta Sans, Weather Icons)
 ├── output/                   # Mostly git-ignored — dry-run PNGs and logs written here
 │   └── latest.png            # Tracked exception: latest dry-run preview
 ├── src/
@@ -76,8 +64,7 @@ Dashboard/
 ### Setup
 
 ```bash
-make setup       # Creates venv/ and installs requirements.txt
-cp config/config.example.yaml config/config.yaml
+make setup       # Creates venv/, installs requirements.txt, and auto-creates config/config.yaml from template
 # Edit config/config.yaml with your API keys and settings
 ```
 
@@ -87,6 +74,7 @@ cp config/config.example.yaml config/config.yaml
 |---|---|
 | `make dry` | Render a PNG with dummy data → `output/latest.png` |
 | `make test` | Run `pytest tests/ -v` |
+| `make check` | Validate config file and exit |
 | `make deploy` | rsync project to Raspberry Pi (requires SSH config) |
 | `make install` | Copy systemd timer/service to Pi and enable the timer |
 
@@ -212,7 +200,7 @@ resampling (in `canvas.py`) — components never need to know the target display
   logging a quota warning.
 - Never commit `config/config.yaml`, `credentials/`, or any file containing API keys.
 
-### Per-Source Cache (v2)
+### Per-Source Cache
 
 `fetchers/cache.py` stores data in a single JSON file (`output/dashboard_cache.json`) with
 per-source buckets so each data source can fail and recover independently:
@@ -266,14 +254,14 @@ Each alert column is rendered by `_draw_alert_column()` as a filled black rectan
 `"! {event}"` text word-wrapped to up to 2 lines and centred in white (`semibold(10)`).
 (`WEATHER_ALERT_H = 15` in `layout.py` is a legacy constant no longer used.)
 
-### Parallel Fetcher Execution (v3)
+### Parallel Fetcher Execution
 
 `fetch_live_data()` in `main.py` uses `concurrent.futures.ThreadPoolExecutor(max_workers=3)`
 to run calendar, weather, and birthday fetchers concurrently. All three are independent
 network calls; running them in parallel cuts refresh latency roughly in half. Cache fallback
 per source still works — each future's result is collected individually.
 
-### Conditional Display Refresh (v3)
+### Conditional Display Refresh
 
 `display/driver.py` exposes `image_changed(image, output_dir)` which computes a SHA-256
 hash of the raw pixel bytes and compares it against the previously persisted hash in
@@ -300,7 +288,7 @@ the app decide:
 
 `--force-full-refresh` on the CLI always wins and bypasses all three checks above.
 
-### Moon Phase (v3)
+### Moon Phase
 
 `render/moon.py` computes the moon's phase using the synodic month length (29.53059 days)
 and a known new-moon reference date (2000-01-06 18:14 UTC). No external API is needed.
@@ -314,7 +302,7 @@ The glyph is rendered in `weather_panel.py` next to the "WEATHER" section label 
 vertically centred using the actual glyph bbox (icon fonts have oversized internal bounding
 boxes — never rely on font metrics alone for positioning).
 
-### Multi-Day Spanning Event Bars (v3)
+### Multi-Day Spanning Event Bars
 
 All-day events spanning 2+ calendar days are rendered as continuous black bars across
 multiple week-view columns instead of being repeated as per-day bars.
@@ -327,7 +315,7 @@ Key functions in `week_view.py`:
   events are offset below by `span_total_h`. Spanning events are excluded from per-day
   rendering via an identity set (`spanning_ids`).
 
-### Extended Weather Forecast (v3)
+### Extended Weather Forecast
 
 `fetchers/weather.py` now returns up to **6 days** of forecast data (was 3) from the OWM
 5-day/3-hour endpoint. The weather panel bottom strip still shows up to 3 forecast columns
@@ -341,7 +329,7 @@ Each forecast column in the strip shows a weather icon (18px), the abbreviated d
 ≥ 5%` — a precipitation probability percentage on a third line (`regular(10)`). All three
 text rows fit within the `WEATHER_FORECAST_H = 38px` strip at offsets +2, +14, and +25.
 
-### Event Filtering (v3)
+### Event Filtering
 
 `src/filters.py` provides `filter_events(events, filters)` which removes events matching
 any configured rule. Filtering runs between fetch and render so the cache retains all events
@@ -355,7 +343,7 @@ any configured rule. Filtering runs between fetch and render so the cache retain
 The filter is wired in `main.py` immediately before rendering. `FilterConfig` defaults to
 empty lists / `False`, so existing configs without a `filters:` section work unchanged.
 
-### Enhanced Weather Data (v3)
+### Enhanced Weather Data
 
 `WeatherData` now includes three additional optional fields: `wind_deg` (degrees, 0=N),
 `pressure` (hPa), and `uv_index` (0–11+).
@@ -366,7 +354,7 @@ empty lists / `False`, so existing configs without a `filters:` section work unc
 - `weather_panel.py` displays compass direction after wind speed and UV index after hi/lo temps
 - `cache.py` serialises/deserialises the new fields with `.get()` for backward compat
 
-### Cache TTL with Staleness Gradation (v3)
+### Cache TTL with Staleness Gradation
 
 `StalenessLevel` enum in `data/models.py`: `FRESH`, `AGING`, `STALE`, `EXPIRED`.
 
@@ -380,7 +368,7 @@ empty lists / `False`, so existing configs without a `filters:` section work unc
 on cache fallback. `draw_header()` accepts `source_staleness` and shows `"! Stale"` when any
 source is STALE or worse. Per-source TTLs are configured via `CacheConfig`.
 
-### Per-Source Fetch Intervals (v3)
+### Per-Source Fetch Intervals
 
 Before submitting each fetcher to the thread pool, `fetch_live_data()` checks if cached data
 is younger than the source's `fetch_interval`. If so, cached data is reused directly without
@@ -389,7 +377,7 @@ an API call and marked as FRESH (it's intentionally cached, not stale).
 Default intervals: weather 30 min, events 120 min, birthdays 1440 min (24 hours).
 `--force-full-refresh` bypasses fetch intervals and always fetches fresh data.
 
-### Adaptive Event Density (v3)
+### Adaptive Event Density
 
 `week_view.py` dynamically adjusts font size and spacing per day column based on event count:
 
@@ -404,7 +392,7 @@ Key functions: `_density_tier(event_count, is_weekend)` returns the tier string;
 show_location, allday_font, allday_pad)`. Compact/dense tiers hide event locations and
 limit titles to 1 line.
 
-### Circuit Breaker for Flaky APIs (v3)
+### Circuit Breaker for Flaky APIs
 
 `fetchers/circuit_breaker.py` implements the circuit breaker pattern per data source:
 
@@ -418,7 +406,7 @@ State is persisted to `/tmp/dashboard_breaker_state.json` (same pattern as `Refr
 `main.py` checks `breaker.should_attempt(source)` before each fetch and calls
 `record_success`/`record_failure` after.
 
-### API Quota Awareness (v3)
+### API Quota Awareness
 
 `fetchers/quota_tracker.py` provides a lightweight daily request counter per source.
 State is persisted to `output/api_quota_state.json` with a date key that auto-resets daily.
@@ -434,10 +422,9 @@ exceeds `google.daily_quota_warning` (default 500). Corrupted state files are si
 
 - Fonts are loaded with `@lru_cache` in `render/fonts.py`. Always use the loader; never
   open font files directly.
-- **Plus Jakarta Sans** — primary UI font (header, section labels, timestamps, weather
-  details, event titles, all-day event bars, and the large date/month display).
-  Use SemiBold for white-on-black (inverted) bars. Fallback: **Inter**.
-- **Lora Italic** — editorial serif for the quote body in the info panel.
+- **Plus Jakarta Sans** — the only text font. Used for all UI chrome: header, section
+  labels, timestamps, weather details, event titles, all-day event bars, the large
+  date/month display, and the daily quote. Use SemiBold for white-on-black (inverted) bars.
 - **weathericons-regular.ttf** — icon font; use character codes from `render/icons.py`.
 
 When adding a font that requires axis selection (variable font), use
@@ -449,7 +436,7 @@ Quotes are selected deterministically by hashing the current date, so the same q
 appears all day. If `config/quotes.json` is absent, built-in defaults are used. Preserve
 this deterministic behaviour.
 
-The `config/quotes.json` pool (86 entries) favours sci-fi, science, philosophy, and wit —
+The `config/quotes.json` pool (125 entries) favours sci-fi, science, philosophy, and wit —
 authors include Feynman, Sagan, Adams, Herbert, Clarke, Nietzsche, Camus, Wittgenstein,
 Wilde, Twain, and others. Each entry is `{"text": "...", "author": "..."}`.
 
@@ -489,64 +476,39 @@ Wilde, Twain, and others. Each entry is `{"text": "...", "author": "..."}`.
 
 ---
 
-## Implemented Phases
-
-- **Phase 1** — Rendering scaffold with dummy data (complete)
-- **Phase 2** — Google Calendar integration via `google-api-python-client` (complete)
-- **Phase 3** — OpenWeatherMap integration via `requests` (complete)
-- **Phase 4** — Birthday parsing from local JSON file, Google Calendar events, or Google Contacts (People API) (complete)
-- **v2 features** — Event location display; weather alerts (OWM OneCall 2.5); per-day
-  busy-ness heatmap dots in column headers; per-source independent cache staleness with
-  `stale_sources` tracking; incremental Google Calendar sync via `nextSyncToken` with
-  delta merging and 410 Gone reset (complete)
-- **v3 features** — Parallel fetcher execution via `ThreadPoolExecutor`; conditional
-  display refresh via SHA-256 image diffing; extended 6-day weather forecast with
-  per-column forecast icons in week-view headers; pure-math moon phase display in
-  weather panel; multi-day spanning event bars across week-view columns; event filtering
-  by calendar/keyword/all-day; enhanced weather data (wind compass, UV index, pressure);
-  cache TTL with staleness gradation (FRESH/AGING/STALE/EXPIRED); per-source fetch
-  intervals; adaptive event density (normal/compact/dense rendering tiers); circuit breaker
-  for flaky APIs; API quota awareness with daily counters (complete)
-- **Refresh schedule** — configurable quiet hours (default 11 pm–6 am) with early exit in
-  `main.py`; forced full refresh on morning wake-up; `max_partials_before_full` wired from
-  config through to `RefreshTracker`; systemd timer switched to `OnCalendar` for
-  wall-clock-aligned 30-minute firing (complete)
-
-The `--dummy` flag remains functional for offline development and testing.
-
----
-
 ## Testing
 
 ```bash
 make test          # pytest tests/ -v
 ```
 
-Twenty test files live in `tests/` (408 tests total):
+Twenty-two test files live in `tests/` (526 tests total):
 
 | File | What it covers |
 |---|---|
 | `test_cache.py` | Cache serialisation round-trips, error paths, v1/v2 format compat, `check_staleness()` |
 | `test_calendar_fetcher.py` | Birthday/event parsing, `fetch_birthdays()`, `_parse_contact_birthday()`, contacts pagination, `_fetch_full`/`_fetch_incremental` pagination and errors, `_filter_to_window` edge cases, `fetch_events` incremental sync |
-| `test_weather_fetcher.py` | `fetch_weather()`, `_pick_midday()`, extended forecast limit, `deg_to_compass()` |
-| `test_fetch_live_data.py` | `fetch_live_data()` — success, failure, cache fallback, fetch intervals, circuit breaker integration |
+| `test_weather_fetcher.py` | `fetch_weather()`, `_pick_midday()`, extended forecast limit, `deg_to_compass()`, sunrise/sunset parsing |
+| `test_fetch_live_data.py` | `fetch_live_data()` — success, failure, cache fallback, fetch intervals, circuit breaker integration, expired cache discard |
 | `test_rendering.py` | `render_dashboard()` pipeline smoke tests, display scaling |
-| `test_config.py` | `load_config()` — defaults, partial YAML, model auto-dimensions, `ScheduleConfig`, `CacheConfig`, `FilterConfig` |
+| `test_config.py` | `load_config()` — defaults, partial YAML, model auto-dimensions, `ScheduleConfig`, `CacheConfig`, `FilterConfig`, title field |
 | `test_config_validation.py` | `validate_config()`, `print_validation_report()` — errors, warnings, hints |
 | `test_refresh_tracker.py` | `RefreshTracker` state logic, save/load round-trip |
 | `test_primitives.py` | Text truncation/wrapping, drawing helpers, ellipsis-only edge case |
-| `test_week_view.py` | `_fmt_time`, `_events_for_day` filtering/sorting, `draw_week`, adaptive density tiers |
-| `test_info_panel.py` | `_quote_for_today` determinism and fallback, `draw_info` |
+| `test_week_view.py` | `_fmt_time`, `_events_for_day` filtering/sorting, `draw_week`, adaptive density tiers, overflow indicator |
+| `test_info_panel.py` | `_quote_for_today` determinism and fallback, `draw_info`, long-quote small-font path |
 | `test_display_driver.py` | `DryRunDisplay`, `WAVESHARE_MODELS` registry, `WaveshareDisplay` init/show/clear, `image_changed` |
 | `test_main_utils.py` | `_retry_fetch` retry logic, `generate_dummy_data`, `_in_quiet_hours`, `_is_morning_startup` |
-| `test_birthday_bar.py` | `draw_birthdays()` — today/tomorrow/milestone/overflow/non-milestone age rendering |
+| `test_main_entry.py` | `main()` CLI entry point — dry-run+dummy, `--check-config`, quiet hours, fatal config errors, morning startup, live data fetch, image-change conditional refresh, hardware display path |
+| `test_birthday_bar.py` | `draw_birthdays()` — today/tomorrow/milestone/overflow/non-milestone age rendering, early layout-break |
 | `test_weather_panel.py` | `draw_weather()` — all branch paths: alerts, forecasts, precip, sunrise/sunset, wind compass, UV index |
-| `test_fonts.py` | All font accessor functions in `render/fonts.py` |
+| `test_fonts.py` | All font accessor functions in `render/fonts.py`, variable font axis selection, lru_cache behaviour |
+| `test_header.py` | `draw_header()` — all staleness levels (FRESH/AGING/STALE/EXPIRED), cached indicator, severity ordering, custom title |
 | `test_v2_features.py` | v2 features: alerts, busy dots, location display, per-source cache, incremental sync |
 | `test_v3_features.py` | v3 features: image diffing, parallel fetchers, moon phase, spanning events, forecast icons, full pipeline |
 | `test_filters.py` | Event filtering: each filter type, case insensitivity, combined filters, None calendar_name, empty list |
-| `test_circuit_breaker.py` | Circuit breaker state transitions: closed→open→half_open, persistence, independent sources |
-| `test_quota_tracker.py` | Quota tracker: daily count, auto-reset on new day, warning threshold, persistence, corrupted state |
+| `test_circuit_breaker.py` | Circuit breaker state transitions: closed→open→half_open→closed, half-open probe paths, cooldown edge cases, persistence |
+| `test_quota_tracker.py` | Quota tracker: daily count, auto-reset on new day, warning threshold, persistence, corrupted state, live-instance day rollover |
 
 Use `--dummy` mode and `DryRunDisplay` to test rendering without hardware or live APIs.
 
