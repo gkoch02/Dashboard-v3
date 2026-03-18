@@ -1,6 +1,7 @@
 from datetime import datetime
 from PIL import ImageDraw
 
+from src.data.models import StalenessLevel
 from src.render import layout as L
 from src.render.fonts import semibold, regular
 from src.render.primitives import filled_rect, BLACK, WHITE, text_height, text_width
@@ -11,6 +12,7 @@ def draw_header(
     now: datetime,
     is_stale: bool = False,
     title: str = "Home Dashboard",
+    source_staleness: dict[str, StalenessLevel] | None = None,
 ):
     y = L.HEADER_Y
     pad = L.PAD
@@ -31,7 +33,25 @@ def draw_header(
     time_str = now.strftime("%-I:%M%p").replace("AM", "a").replace("PM", "p")
     date_str = now.strftime("%b %-d")
     ts = f"{date_str}  ·  {time_str}"
-    updated_label = "! Cached  " if is_stale else "Updated  "
+    # Determine header label based on worst staleness level
+    worst = StalenessLevel.FRESH
+    if source_staleness:
+        for level in source_staleness.values():
+            if level.value != StalenessLevel.FRESH.value:
+                # Compare by severity: EXPIRED > STALE > AGING > FRESH
+                severity = {
+                    StalenessLevel.FRESH: 0, StalenessLevel.AGING: 1,
+                    StalenessLevel.STALE: 2, StalenessLevel.EXPIRED: 3,
+                }
+                if severity.get(level, 0) > severity.get(worst, 0):
+                    worst = level
+
+    if worst == StalenessLevel.STALE or worst == StalenessLevel.EXPIRED:
+        updated_label = "! Stale  "
+    elif is_stale:
+        updated_label = "! Cached  "
+    else:
+        updated_label = "Updated  "
 
     label_w = text_width(draw, updated_label, label_font)
     ts_w = text_width(draw, ts, time_font)

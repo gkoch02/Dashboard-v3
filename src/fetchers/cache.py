@@ -16,12 +16,37 @@ from datetime import date, datetime
 from pathlib import Path
 
 from src.data.models import (
-    Birthday, CalendarEvent, DashboardData, DayForecast, WeatherAlert, WeatherData,
+    Birthday, CalendarEvent, DashboardData, DayForecast, StalenessLevel,
+    WeatherAlert, WeatherData,
 )
 
 logger = logging.getLogger(__name__)
 
+
+def check_staleness(
+    fetched_at: datetime, ttl_minutes: int, now: datetime | None = None,
+) -> StalenessLevel:
+    """Determine staleness level based on cache age relative to TTL.
+
+    - FRESH:   age <= ttl
+    - AGING:   ttl < age <= 2*ttl
+    - STALE:   2*ttl < age <= 4*ttl
+    - EXPIRED: age > 4*ttl
+    """
+    if now is None:
+        now = datetime.now()
+    age_minutes = (now - fetched_at).total_seconds() / 60
+    if age_minutes <= ttl_minutes:
+        return StalenessLevel.FRESH
+    if age_minutes <= ttl_minutes * 2:
+        return StalenessLevel.AGING
+    if age_minutes <= ttl_minutes * 4:
+        return StalenessLevel.STALE
+    return StalenessLevel.EXPIRED
+
+
 _CACHE_FILENAME = "dashboard_cache.json"
+
 _SCHEMA_VERSION = 2
 _cache_lock = threading.Lock()
 
@@ -212,6 +237,9 @@ def _ser_weather(w: WeatherData) -> dict:
         "humidity": w.humidity,
         "feels_like": w.feels_like,
         "wind_speed": w.wind_speed,
+        "wind_deg": w.wind_deg,
+        "pressure": w.pressure,
+        "uv_index": w.uv_index,
         "sunrise": w.sunrise.isoformat() if w.sunrise else None,
         "sunset": w.sunset.isoformat() if w.sunset else None,
         "forecast": [
@@ -300,6 +328,9 @@ def _deser_weather(w: dict) -> WeatherData:
         humidity=w["humidity"],
         feels_like=w.get("feels_like"),
         wind_speed=w.get("wind_speed"),
+        wind_deg=w.get("wind_deg"),
+        pressure=w.get("pressure"),
+        uv_index=w.get("uv_index"),
         sunrise=sunrise,
         sunset=sunset,
         forecast=[

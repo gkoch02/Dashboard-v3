@@ -8,18 +8,36 @@ A Python-based eInk dashboard for Raspberry Pi that displays your week's calenda
 
 ## Features
 
+### Display & Rendering
+
 - **Weekly calendar view** — 7-day grid (Mon–Sun) with timed and all-day events from Google Calendar; event locations shown below each title; per-day busy-ness dots and forecast icons in column headers
 - **Multi-day spanning events** — all-day events spanning multiple days render as continuous bars across columns instead of being repeated per-day
-- **Weather panel** — current conditions, high/low, 3-day forecast strip, active weather alerts, and moon phase icon via OpenWeatherMap
+- **Adaptive event density** — automatically switches between normal, compact, and dense rendering tiers based on event count per day column; busy days use smaller fonts and tighter spacing to fit more events before showing "+N more"
+- **Weather panel** — current conditions, high/low, wind speed with compass direction, UV index, 3-day forecast strip, active weather alerts, and moon phase icon via OpenWeatherMap
 - **Extended forecast** — up to 6 days of weather forecast data; small weather icons in each day's column header for a unified week-at-a-glance view
 - **Moon phase** — pure-math lunar phase calculation displayed next to the weather label — no API needed
 - **Birthdays** — upcoming birthdays from a local JSON file, Google Calendar events, or Google Contacts, shown with a countdown ("Today!", "Tomorrow", "in Nd")
 - **Daily quote** — deterministic daily rotation from a configurable quote pool (default pool of 86 quotes spanning sci-fi, science, philosophy, and wit)
+
+### Data & Caching
+
+- **Per-source fetch intervals** — configurable refresh intervals per data source (weather every 30 min, calendar every 2 hours, birthdays once daily); skips API calls when cached data is still within the fetch window
+- **Cache TTL with staleness gradation** — cached data progresses through FRESH → AGING → STALE → EXPIRED levels based on configurable per-source TTLs; expired data (>4x TTL) is discarded entirely rather than shown
+- **Event filtering** — hide events by calendar name, keyword, or all-day status without removing them from the cache; case-insensitive substring matching keeps configuration simple
+- **Incremental calendar sync** — after the first fetch, only changed events are downloaded using Google Calendar sync tokens, reducing API quota usage
 - **Parallel data fetching** — calendar, weather, and birthday API calls run concurrently for faster refresh
+- **Enhanced weather data** — wind direction (8-point compass), barometric pressure, and UV index extracted from OpenWeatherMap APIs
+
+### Reliability
+
+- **Circuit breaker for flaky APIs** — after N consecutive failures (default 3), stops hitting the failing API for a configurable cooldown period; allows a single "half-open" probe after cooldown and resets on success
+- **API quota awareness** — lightweight daily request counter per data source with configurable warning thresholds; auto-resets each day; logs warnings when approaching limits
+- **Per-source stale data indicator** — header shows `! Stale` when any source's cached data exceeds its TTL; each source (calendar, weather, birthdays) falls back independently so a single outage doesn't stale unrelated data
+
+### Infrastructure
+
 - **Conditional display refresh** — SHA-256 image diffing skips eInk updates when nothing changed, extending display lifespan and saving power
 - **Smart refresh schedule** — configurable quiet hours (default 11 pm–6 am) suppress all updates overnight; the first run each morning triggers a forced full refresh for a clean display start
-- **Per-source stale data indicator** — header shows `! Cached` when any API fails; each source (calendar, weather, birthdays) falls back independently so a single outage doesn't stale unrelated data
-- **Incremental calendar sync** — after the first fetch, only changed events are downloaded using Google Calendar sync tokens, reducing API quota usage
 - **Dry-run mode** — renders to PNG without any hardware, great for development
 
 ---
@@ -116,6 +134,20 @@ Open `config/config.yaml` in any text editor and fill in the values below. The G
 | `schedule.quiet_hours_end` | Hour (0–23) when the display wakes up — default `6` (6 am). The 6:00–6:29 run always does a full refresh. |
 | `display.enable_partial_refresh` | Set to `true` to use fast partial refreshes between full ones (see below) |
 | `display.max_partials_before_full` | Number of partial refreshes before forcing a full one — default `6` (~3 hours at 30-min polling) |
+
+All fields below are **optional** — sensible defaults apply when omitted:
+
+| Field | What it does | Default |
+|---|---|---|
+| `cache.weather_ttl_minutes` | How long cached weather data stays usable | `60` |
+| `cache.events_ttl_minutes` | How long cached calendar data stays usable | `120` |
+| `cache.birthdays_ttl_minutes` | How long cached birthday data stays usable | `1440` |
+| `cache.weather_fetch_interval` | Minutes between weather API calls | `30` |
+| `cache.events_fetch_interval` | Minutes between calendar API calls | `120` |
+| `cache.birthdays_fetch_interval` | Minutes between birthday API calls | `1440` |
+| `filters.exclude_calendars` | Calendar names to hide (substring match) | `[]` |
+| `filters.exclude_keywords` | Keywords in event titles to hide | `[]` |
+| `filters.exclude_all_day` | Hide all-day events | `false` |
 
 ### 3. Preview (no hardware needed)
 
@@ -320,7 +352,7 @@ make install      # Copy systemd timer/service to Pi and enable
 | `--dry-run` | Save to PNG instead of pushing to display |
 | `--dummy` | Use built-in dummy data (no API calls) |
 | `--config PATH` | Path to config file (default: `config/config.yaml`) |
-| `--force-full-refresh` | Force a full eInk refresh cycle |
+| `--force-full-refresh` | Force a full eInk refresh cycle (also bypasses fetch intervals and circuit breakers) |
 | `--check-config` | Validate config file and exit |
 
 ### Offline development
@@ -330,6 +362,45 @@ venv/bin/python -m src.main --dry-run --dummy
 ```
 
 No API keys, no hardware, no credentials needed.
+
+---
+
+## Advanced Configuration
+
+### Cache TTL and Fetch Intervals
+
+Control how often each data source is refreshed and how long cached data remains usable after a fetch failure:
+
+```yaml
+cache:
+  # TTL — data older than 4x these values is discarded (EXPIRED)
+  weather_ttl_minutes: 60       # 1 hour
+  events_ttl_minutes: 120       # 2 hours
+  birthdays_ttl_minutes: 1440   # 24 hours
+  # Fetch intervals — skip API calls when cache is younger than this
+  weather_fetch_interval: 30    # check weather every 30 min
+  events_fetch_interval: 120    # check calendar every 2 hours
+  birthdays_fetch_interval: 1440  # check birthdays once per day
+```
+
+The staleness system classifies cached data into four levels based on its age relative to the TTL: **FRESH** (within TTL), **AGING** (1–2x TTL), **STALE** (2–4x TTL), and **EXPIRED** (>4x TTL, discarded). The header displays a `! Stale` indicator when any source reaches the STALE level.
+
+### Event Filtering
+
+Hide events from the display without removing them from the cache (important for incremental sync correctness):
+
+```yaml
+filters:
+  exclude_calendars: ["US Holidays", "Spam Calendar"]
+  exclude_keywords: ["OOO", "Focus Time", "Block"]
+  exclude_all_day: false
+```
+
+All matching is case-insensitive and uses substring matching — `"Holiday"` matches `"US Holidays"`.
+
+### Circuit Breaker
+
+The circuit breaker automatically backs off when an API fails repeatedly, preventing wasted requests and log noise. After 3 consecutive failures, the source is skipped for 30 minutes. A single successful "probe" request after cooldown resets the breaker. These defaults are not yet exposed in config but can be tuned in `src/config.py` (`CacheConfig.max_failures`, `CacheConfig.cooldown_minutes`).
 
 ---
 
@@ -348,10 +419,13 @@ Dashboard/
 │   ├── config.py             # Config loader
 │   ├── data/models.py        # Data model dataclasses
 │   ├── display/              # Display drivers (DryRun + Waveshare) + conditional refresh
-│   ├── fetchers/             # API integrations + file-based cache
-│   │   ├── weather.py        # OpenWeatherMap (conditions, extended forecast, alerts)
+│   ├── filters.py            # Event filtering (calendar name, keyword, all-day)
+│   ├── fetchers/             # API integrations + file-based cache + reliability
+│   │   ├── weather.py        # OpenWeatherMap (conditions, extended forecast, alerts, UV)
 │   │   ├── calendar.py       # Google Calendar + incremental sync + birthday parsing
-│   │   └── cache.py          # Per-source JSON cache with independent staleness tracking
+│   │   ├── cache.py          # Per-source JSON cache with staleness gradation (TTL-based)
+│   │   ├── circuit_breaker.py # Circuit breaker pattern for flaky API resilience
+│   │   └── quota_tracker.py  # Daily API call counter with warning thresholds
 │   └── render/               # Pure Pillow rendering pipeline
 │       ├── canvas.py         # Top-level orchestrator
 │       ├── layout.py         # Pixel geometry constants

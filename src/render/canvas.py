@@ -26,7 +26,10 @@ def render_dashboard(
     today = now.date() if isinstance(now, datetime) else now
 
     # Header
-    header.draw_header(draw, now, is_stale=data.is_stale, title=title)
+    header.draw_header(
+        draw, now, is_stale=data.is_stale, title=title,
+        source_staleness=data.source_staleness,
+    )
 
     # Week view (left panel) — pass forecast for per-day weather icons in headers
     week_forecast = data.weather.forecast if data.weather else None

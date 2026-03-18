@@ -4,7 +4,8 @@ from PIL import ImageDraw
 from src.data.models import CalendarEvent, DayForecast
 from src.render import layout as L
 from src.render.fonts import (
-    semibold, regular, bold, fraunces_bold, barlow_condensed_semibold,
+    semibold, regular, bold, fraunces_bold,
+    barlow_condensed_semibold, barlow_condensed_medium,
 )
 from src.render.icons import draw_weather_icon
 from src.render.primitives import (
@@ -18,6 +19,52 @@ PAD = L.PAD_SM + 1  # 5px inner padding for columns
 _DEFAULT_MAX_DOTS = 5
 _DOT_SIZE = 3
 _DOT_GAP = 2
+
+
+def _density_tier(event_count: int, is_weekend: bool) -> str:
+    """Select density tier based on event count and column type.
+
+    Returns ``"normal"``, ``"compact"``, or ``"dense"``.
+    Weekend columns have lower thresholds due to reduced height.
+    """
+    if is_weekend:
+        if event_count >= 5:
+            return "dense"
+        if event_count >= 3:
+            return "compact"
+        return "normal"
+    # Weekday
+    if event_count >= 8:
+        return "dense"
+    if event_count >= 5:
+        return "compact"
+    return "normal"
+
+
+def _fonts_for_tier(tier: str) -> tuple:
+    """Return rendering parameters for the given density tier.
+
+    Returns ``(time_font, title_font, allday_font, event_spacing,
+    max_title_lines, show_location, allday_pad)``.
+    """
+    if tier == "dense":
+        return (
+            regular(9), barlow_condensed_medium(11),
+            barlow_condensed_semibold(11),
+            2, 1, False, 4,
+        )
+    if tier == "compact":
+        return (
+            regular(10), barlow_condensed_medium(12),
+            barlow_condensed_semibold(11),
+            3, 1, False, 4,
+        )
+    # normal
+    return (
+        regular(11), barlow_condensed_semibold(14),
+        barlow_condensed_semibold(13),
+        6, 2, True, 6,
+    )
 
 
 def _fmt_time(dt: datetime) -> str:
@@ -57,8 +104,6 @@ def draw_week(
 
     day_label_font = semibold(13)
     day_num_font = bold(14)
-    event_time_font = regular(11)
-    event_title_font = barlow_condensed_semibold(14)
 
     date_section_h = L.WEEK_DATE_SECTION_H
     date_section_font = fraunces_bold(100)
@@ -178,8 +223,16 @@ def draw_week(
         day_events_filtered = [e for e in day_events if id(e) not in spanning_ids]
 
         if day_events_filtered:
-            _draw_day_events(draw, day_events_filtered, cx, events_y_start, col_w, adjusted_body_h,
-                             event_time_font, event_title_font)
+            tier = _density_tier(len(day_events_filtered), is_weekend)
+            (t_font, ti_font, ad_font,
+             spacing, max_lines, show_loc, ad_pad) = _fonts_for_tier(tier)
+            _draw_day_events(
+                draw, day_events_filtered, cx, events_y_start,
+                col_w, adjusted_body_h, t_font, ti_font,
+                allday_font=ad_font, event_spacing=spacing,
+                max_title_lines=max_lines, show_location=show_loc,
+                allday_pad=ad_pad,
+            )
         elif not day_events:  # only show dash if truly empty (no spanning events either)
             # Subtle empty indicator centred in the column
             empty_font = regular(12)
@@ -318,12 +371,19 @@ def _draw_day_events(
     max_h: int,
     time_font,
     title_font,
+    allday_font=None,
+    event_spacing: int = 6,
+    max_title_lines: int = 2,
+    show_location: bool = True,
+    allday_pad: int = 6,
 ):
+    if allday_font is None:
+        allday_font = barlow_condensed_semibold(13)
+
     y = y_start + PAD + 1
     max_w = col_w - PAD * 2 - 1
     time_h = text_height(time_font)
     title_h = text_height(title_font)
-    event_spacing = 6
     loc_font = regular(10)
     loc_h = text_height(loc_font)
 
@@ -335,12 +395,11 @@ def _draw_day_events(
             break
 
         if event.is_all_day:
-            # All-day: filled bar with white text, taller for readability
-            allday_font = barlow_condensed_semibold(13)
-            bar_h = text_height(allday_font) + 6
+            # All-day: filled bar with white text
+            bar_h = text_height(allday_font) + allday_pad
             filled_rect(draw, (cx + PAD - 1, y, cx + col_w - PAD, y + bar_h), fill=BLACK)
             draw_text_truncated(
-                draw, (cx + PAD + 2, y + 3),
+                draw, (cx + PAD + 2, y + allday_pad // 2),
                 event.summary, allday_font, max_w - 6, fill=WHITE,
             )
             y += bar_h + event_spacing
@@ -356,16 +415,18 @@ def _draw_day_events(
             y += time_h + 1
             used_h = draw_text_wrapped(
                 draw, (cx + PAD, y), event.summary, title_font,
-                max_w, max_lines=2, line_spacing=1, fill=BLACK,
+                max_w, max_lines=max_title_lines, line_spacing=1, fill=BLACK,
             )
             y += max(used_h, title_h)
 
-            # Location line — only rendered when there's room and a location is set
-            if event.location:
-                loc_text = event.location.split(",")[0].strip()  # first component only
+            # Location line — only in normal density when there's room
+            if show_location and event.location:
+                loc_text = event.location.split(",")[0].strip()
                 if loc_text and y - y_start + loc_h <= max_h - PAD:
                     y += 1
-                    draw_text_truncated(draw, (cx + PAD, y), loc_text, loc_font, max_w, fill=BLACK)
+                    draw_text_truncated(
+                        draw, (cx + PAD, y), loc_text, loc_font, max_w, fill=BLACK,
+                    )
                     y += loc_h
 
             y += event_spacing

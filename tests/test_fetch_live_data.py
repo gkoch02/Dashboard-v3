@@ -11,10 +11,17 @@ from src.main import fetch_live_data
 
 
 def _make_cached(tmpdir: str) -> DashboardData:
-    """Write a minimal cache file and return the data written."""
-    from datetime import date
+    """Write a minimal cache file and return the data written.
+
+    Uses a recent timestamp (30 minutes ago) so the cached data is within
+    the default TTL window and won't be discarded as expired.
+    """
+    from datetime import date, timedelta
+    # 3 hours ago: beyond all default fetch intervals but within TTL
+    # (events TTL=120min → AGING, weather TTL=60min → AGING)
+    recent = datetime.now() - timedelta(hours=3)
     cached = DashboardData(
-        fetched_at=datetime(2024, 3, 14, 8, 0),
+        fetched_at=recent,
         events=[
             CalendarEvent(
                 summary="Cached Event",

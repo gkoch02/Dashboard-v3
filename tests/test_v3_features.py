@@ -129,8 +129,9 @@ class TestParallelFetchers:
         from src.main import fetch_live_data
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Pre-populate weather cache
-            save_source("weather", _make_weather(), datetime(2024, 3, 15, 9), tmpdir)
+            # Pre-populate weather cache (recent enough to be within TTL)
+            from datetime import timedelta
+            save_source("weather", _make_weather(), datetime.now() - timedelta(hours=3), tmpdir)
 
             with patch("src.main.fetch_events", return_value=[]), \
                  patch("src.main.fetch_weather", side_effect=RuntimeError("down")), \

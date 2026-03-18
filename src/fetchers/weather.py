@@ -44,7 +44,7 @@ def fetch_weather(cfg: WeatherConfig, tz: tzinfo | None = None) -> WeatherData:
     with requests.Session() as session:
         current = _fetch_current(session, params)
         today_high, today_low, forecast = _fetch_forecast(session, params, tz=tz)
-        alerts = _fetch_alerts(session, params)
+        alerts, uv_index = _fetch_alerts_and_uv(session, params)
 
     # Extract sunrise/sunset as timezone-aware datetimes when available
     slot_tz = tz if tz is not None else timezone.utc
@@ -71,6 +71,9 @@ def fetch_weather(cfg: WeatherConfig, tz: tzinfo | None = None) -> WeatherData:
         alerts=alerts,
         feels_like=current["main"].get("feels_like"),
         wind_speed=current.get("wind", {}).get("speed"),
+        wind_deg=current.get("wind", {}).get("deg"),
+        pressure=current["main"].get("pressure"),
+        uv_index=uv_index,
         sunrise=sunrise,
         sunset=sunset,
     )
@@ -132,30 +135,48 @@ def _fetch_forecast(
     return today_high, today_low, forecasts
 
 
-def _fetch_alerts(session: requests.Session, params: dict) -> list[WeatherAlert]:
-    """Fetch active weather alerts from OWM OneCall 2.5.
+def _fetch_alerts_and_uv(
+    session: requests.Session, params: dict,
+) -> tuple[list[WeatherAlert], float | None]:
+    """Fetch active weather alerts and UV index from OWM OneCall 2.5.
 
-    Returns an empty list on any failure (network error, unsupported API tier,
-    or no active alerts).  Alerts are best-effort and never block the main fetch.
+    Returns ``(alerts, uv_index)`` — both are best-effort.  On any failure
+    (network error, unsupported API tier) returns ``([], None)``.
     """
     onecall_params = {
         **params,
-        "exclude": "minutely,hourly,daily,current",
+        "exclude": "minutely,hourly,daily",
     }
     try:
         resp = session.get(_OWM_ONECALL_URL, params=onecall_params, timeout=_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
     except Exception as exc:
-        logger.debug("Weather alerts fetch skipped: %s", exc)
-        return []
+        logger.debug("Weather alerts/UV fetch skipped: %s", exc)
+        return [], None
 
     alerts: list[WeatherAlert] = []
     for a in data.get("alerts", []):
         event = a.get("event", "").strip()
         if event:
             alerts.append(WeatherAlert(event=event))
-    return alerts
+
+    uv_index: float | None = None
+    current = data.get("current", {})
+    if "uvi" in current:
+        uv_index = float(current["uvi"])
+
+    return alerts, uv_index
+
+
+def deg_to_compass(deg: float) -> str:
+    """Convert wind direction in degrees to a compass abbreviation.
+
+    Uses 8 sectors of 45° each, centred on each cardinal/intercardinal direction.
+    """
+    directions = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+    idx = round(deg % 360 / 45) % 8
+    return directions[idx]
 
 
 def _pick_midday(slots: list[dict], tz: tzinfo | None = None) -> dict | None:

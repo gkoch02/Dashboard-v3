@@ -8,6 +8,7 @@ from src.render.fonts import bold, regular, medium, semibold, weather_icon as we
 from src.render.primitives import BLACK, WHITE, filled_rect, hline, text_width, vline
 from src.render.icons import draw_weather_icon
 from src.render.moon import moon_phase_glyph
+from src.fetchers.weather import deg_to_compass
 
 
 def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: date | None = None):
@@ -71,9 +72,14 @@ def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: 
         weather.current_description.title(), font=desc_font, fill=BLACK,
     )
 
-    # Row 2: hi/lo
+    # Row 2: hi/lo + UV index when available
     hilo_font = medium(12)
     hilo_str = f"H:{weather.high:.0f}°  L:{weather.low:.0f}°"
+    if weather.uv_index is not None:
+        uv_suffix = f"  UV:{weather.uv_index:.0f}"
+        max_detail_w = w - L.WEATHER_DETAIL_X_OFFSET - pad
+        if text_width(draw, hilo_str + uv_suffix, hilo_font) <= max_detail_w:
+            hilo_str += uv_suffix
     draw.text((right_x, y0 + L.WEATHER_HILO_Y_OFFSET), hilo_str, font=hilo_font, fill=BLACK)
 
     # Row 3: feels-like + wind speed (Feature 1)
@@ -82,7 +88,10 @@ def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: 
     if weather.feels_like is not None:
         detail3_parts.append(f"Feels {weather.feels_like:.0f}°")
     if weather.wind_speed is not None:
-        detail3_parts.append(f"Wind {weather.wind_speed:.0f}mph")
+        wind_str = f"Wind {weather.wind_speed:.0f}mph"
+        if weather.wind_deg is not None:
+            wind_str += f" {deg_to_compass(weather.wind_deg)}"
+        detail3_parts.append(wind_str)
     if detail3_parts:
         draw.text(
             (right_x, y0 + L.WEATHER_DETAIL3_Y_OFFSET),
