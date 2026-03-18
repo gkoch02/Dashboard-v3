@@ -7,3 +7,7 @@ venv/
 
 # Local config with secrets — use config/config.example.yaml as template
 config/config.yaml
+
+# Output directory — mostly generated; only latest.png is tracked
+output/*
+!output/latest.png
