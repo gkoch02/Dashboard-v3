@@ -3,7 +3,7 @@ from PIL import ImageDraw
 
 from src.data.models import StalenessLevel
 from src.render import layout as L
-from src.render.fonts import semibold, regular
+from src.render.fonts import semibold, regular, bold
 from src.render.primitives import filled_rect, BLACK, WHITE, text_height, text_width
 
 
@@ -21,7 +21,7 @@ def draw_header(
     filled_rect(draw, (0, 0, L.WIDTH - 1, L.HEADER_H - 1), fill=BLACK)
 
     # Title (left) — white text on black
-    title_font = semibold(18)
+    title_font = bold(20)
     th = text_height(title_font)
     title_y = y + (L.HEADER_H - th) // 2
     draw.text((pad, title_y), title, font=title_font, fill=WHITE)

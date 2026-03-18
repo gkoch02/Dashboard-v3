@@ -66,7 +66,7 @@ def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: 
     right_x = x0 + L.WEATHER_DETAIL_X_OFFSET
 
     # Row 1: description
-    desc_font = regular(13)
+    desc_font = medium(13)
     draw.text(
         (right_x, y0 + L.WEATHER_CONTENT_Y_OFFSET),
         weather.current_description.title(), font=desc_font, fill=BLACK,
