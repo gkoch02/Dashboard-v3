@@ -2,8 +2,10 @@
 
 Inverted color scheme (white on black) with a compact header and wider
 weather panel for a data-heavy, information-dense terminal aesthetic.
+Uses Share Tech Mono for an authentic monospace terminal feel.
 """
 from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
+from src.render.fonts import cyber_mono
 
 
 def cyberpunk_theme() -> Theme:
@@ -32,5 +34,11 @@ def cyberpunk_theme() -> Theme:
             spacing_scale=0.85,       # tight — denser, more information visible
             label_font_size=11,
             label_font_weight="bold",
+            # Share Tech Mono: monospace terminal font across all weights for
+            # a consistent hacker/data-terminal aesthetic.
+            font_regular=cyber_mono,
+            font_medium=cyber_mono,
+            font_semibold=cyber_mono,
+            font_bold=cyber_mono,
         ),
     )
