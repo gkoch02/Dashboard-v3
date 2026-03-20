@@ -8,9 +8,10 @@ venv/
 # Local config with secrets — use config/config.example.yaml as template
 config/config.yaml
 
-# Output directory — mostly generated; only latest.png is tracked
+# Output directory — mostly generated; only specific PNGs are tracked
 output/*
 !output/latest.png
+!output/theme_*.png
 
 # Coverage reports
 .coverage

@@ -17,6 +17,7 @@ from src.fetchers.quota_tracker import QuotaTracker
 from src.fetchers.calendar import fetch_events, fetch_birthdays
 from src.fetchers.weather import fetch_weather
 from src.render.canvas import render_dashboard
+from src.render.theme import load_theme
 from src.display.driver import DryRunDisplay, image_changed
 
 
@@ -517,7 +518,8 @@ def main():
 
     # Render
     logger.info("Rendering dashboard")
-    image = render_dashboard(data, cfg.display, title=cfg.title)
+    theme = load_theme(cfg.theme)
+    image = render_dashboard(data, cfg.display, title=cfg.title, theme=theme)
 
     # Conditional refresh — skip display update when the image hasn't changed.
     # Always write in dry-run mode (useful for dev); skip hardware refresh on

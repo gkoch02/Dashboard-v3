@@ -8,6 +8,7 @@ from PIL import ImageDraw
 from src.render import layout as L
 from src.render.fonts import bold, semibold, regular
 from src.render.primitives import BLACK, hline, draw_text_wrapped
+from src.render.theme import ComponentRegion, ThemeStyle
 
 QUOTES_FILE = Path(__file__).parent.parent.parent.parent / "config" / "quotes.json"
 
@@ -85,11 +86,22 @@ def _count_lines(text: str, font, max_width: int) -> int:
     return lines
 
 
-def draw_info(draw: ImageDraw.ImageDraw, today: date):
-    x0 = L.INFO_X
-    y0 = L.INFO_Y
-    w = L.INFO_W
-    h = L.INFO_H
+def draw_info(
+    draw: ImageDraw.ImageDraw,
+    today: date,
+    *,
+    region: ComponentRegion | None = None,
+    style: ThemeStyle | None = None,
+):
+    if region is None:
+        region = ComponentRegion(L.INFO_X, L.INFO_Y, L.INFO_W, L.INFO_H)
+    if style is None:
+        style = ThemeStyle()
+
+    x0 = region.x
+    y0 = region.y
+    w = region.w
+    h = region.h
     pad = L.PAD
 
     # Top border (2px for stronger section separation)
@@ -97,8 +109,8 @@ def draw_info(draw: ImageDraw.ImageDraw, today: date):
     hline(draw, y0 + 1, x0, x0 + w)
 
     # Section label
-    label_font = bold(12)
-    draw.text((x0 + pad, y0 + pad), "QUOTE OF THE DAY", font=label_font, fill=BLACK)
+    label_font = style.label_font()
+    draw.text((x0 + pad, y0 + pad), "QUOTE OF THE DAY", font=label_font, fill=style.fg)
 
     quote = _quote_for_today(today)
 
@@ -107,20 +119,20 @@ def draw_info(draw: ImageDraw.ImageDraw, today: date):
     y = y0 + 28
     max_width = w - pad * 2
 
-    quote_font = regular(14)
+    quote_font = style.font_regular(14)
     if _count_lines(text, quote_font, max_width) > 3:
-        quote_font = regular(12)
+        quote_font = style.font_regular(12)
         max_lines = 4
     else:
         max_lines = 3
 
     used_h = draw_text_wrapped(
         draw, (x0 + pad, y), text, quote_font,
-        max_width, max_lines=max_lines, line_spacing=3, fill=BLACK,
+        max_width, max_lines=max_lines, line_spacing=3, fill=style.fg,
     )
 
     # Attribution
-    author_font = regular(12)
+    author_font = style.font_regular(12)
     attr_y = y + used_h + 6
     if attr_y + 16 < y0 + h:
-        draw.text((x0 + pad, attr_y), f'— {quote["author"]}', font=author_font, fill=BLACK)
+        draw.text((x0 + pad, attr_y), f'— {quote["author"]}', font=author_font, fill=style.fg)

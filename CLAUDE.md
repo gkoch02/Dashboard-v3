@@ -40,12 +40,17 @@ Dashboard/
 │   │   ├── circuit_breaker.py # Circuit breaker pattern — CLOSED/OPEN/HALF_OPEN state machine, persistent
 │   │   └── quota_tracker.py  # Daily API call counter per source with warning thresholds
 │   └── render/
-│       ├── canvas.py         # render_dashboard() — top-level orchestrator
-│       ├── layout.py         # All pixel constants (widths, heights, margins)
+│       ├── canvas.py         # render_dashboard() — top-level orchestrator; theme-driven draw loop
+│       ├── layout.py         # All pixel constants (widths, heights, margins) — default geometry only
 │       ├── fonts.py          # Font loader with @lru_cache
 │       ├── icons.py          # OWM icon-code → weather-icon character map
 │       ├── moon.py           # Pure-math moon phase calculator (synodic month); moon_phase_glyph()
 │       ├── primitives.py     # Shared draw helpers (truncated text, wrapped text)
+│       ├── theme.py          # Theme system: ComponentRegion, ThemeLayout, ThemeStyle, Theme; load_theme()
+│       ├── themes/           # One file per named theme
+│       │   ├── cyberpunk.py
+│       │   ├── minimalist.py
+│       │   └── old_fashioned.py
 │       └── components/       # One file per UI region
 │           ├── header.py
 │           ├── week_view.py
@@ -448,6 +453,225 @@ exceeds `google.daily_quota_warning` (default 500). Corrupted state files are si
 When adding a font that requires axis selection (variable font), use
 `_get_variable_font(name, size, wght)` rather than `get_font()`. Both are `@lru_cache`d.
 
+### Theme System
+
+The theme system lets a user select an entirely different dashboard layout and visual style
+by setting `theme: <name>` in `config.yaml`. Themes are not limited to colors or fonts —
+they can reposition components anywhere on the canvas, change proportions, or hide sections
+entirely.
+
+#### Two-Object Design
+
+Every theme is a `Theme` dataclass containing two objects:
+
+```python
+@dataclass
+class Theme:
+    name: str
+    style: ThemeStyle    # visual properties
+    layout: ThemeLayout  # structural geometry
+```
+
+**`ThemeLayout`** defines where things are:
+
+```python
+@dataclass
+class ThemeLayout:
+    canvas_w: int = 800
+    canvas_h: int = 480
+    header:    ComponentRegion = ...
+    week_view: ComponentRegion = ...
+    weather:   ComponentRegion = ...
+    birthdays: ComponentRegion = ...
+    info:      ComponentRegion = ...
+    draw_order: list[str] = ["header", "week_view", "weather", "birthdays", "info"]
+```
+
+**`ThemeStyle`** defines how things look:
+
+```python
+@dataclass
+class ThemeStyle:
+    fg: int = 0                    # 1-bit foreground (0=black, 1=white)
+    bg: int = 1                    # 1-bit background
+    invert_header: bool = True     # filled fg bar + bg text in the header
+    invert_today_col: bool = True  # filled fg column + bg text for today
+    invert_allday_bars: bool = True # solid fill vs. outlined all-day event bars
+    font_regular: FontCallable | None = None   # auto-filled from fonts.py if None
+    font_medium:  FontCallable | None = None
+    font_semibold: FontCallable | None = None
+    font_bold:    FontCallable | None = None
+    spacing_scale: float = 1.0     # multiplier on event row spacing in week_view
+    label_font_size: int = 12      # size for "WEATHER" / "BIRTHDAYS" / "QUOTE" labels
+    label_font_weight: str = "bold" # "bold" | "semibold" | "regular"
+```
+
+Font callables are `Callable[[int], FreeTypeFont]` — functions that take a point size and
+return a loaded font. Leaving them `None` causes `ThemeStyle.__post_init__` to fill in
+the default Plus Jakarta Sans accessors from `render/fonts.py`.
+
+**`ComponentRegion`** is the bounding box passed into every `draw_*` function:
+
+```python
+@dataclass
+class ComponentRegion:
+    x: int; y: int; w: int; h: int
+    visible: bool = True
+```
+
+Setting `visible=False` on a region tells `canvas.py` to skip that component entirely —
+no drawing, no crash.
+
+#### How canvas.py Uses the Theme
+
+`render_dashboard()` receives an optional `theme: Theme | None`. When `None`, it calls
+`default_theme()` internally. The draw loop iterates `layout.draw_order` and for each name:
+
+1. Looks up `getattr(layout, name)` to get the `ComponentRegion`.
+2. Skips if `region.visible` is `False`.
+3. Skips if the matching `DisplayConfig` visibility flag is `False`
+   (`show_weather`, `show_birthdays`, `show_info_panel`).
+4. Calls the component's `draw_*()` function, passing `region=region, style=style` as
+   keyword-only arguments.
+
+All components compute their internal geometry proportionally from `region.w` and `region.h`
+rather than from hardcoded pixel constants, so they render correctly at any size and position.
+
+#### Built-in Themes
+
+| Name | Key characteristics |
+|---|---|
+| `default` | Exact pre-theme layout (800×480, header 40px, week 320px, bottom strip 120px). Black text on white. Filled black header/today/allday bars. |
+| `cyberpunk` | Same layout geometry. Inverted fg/bg — white canvas is black, text is white. `invert_header=False` (canvas is already dark). Tight `spacing_scale=0.85`. |
+| `minimalist` | Slim 30px header; week view gains 20px (340px tall). Bottom strip at y=370, each panel 110px tall, equal-width thirds. No filled header or allday bars — outlined instead. Generous `spacing_scale=1.4`. |
+| `old_fashioned` | Structural rearrangement: calendar left 62% (500px wide, full 424px tall). Weather, birthdays, and quote stacked in right 300px column. Tall 56px header. Placeholder for a serif font (see comments in `old_fashioned.py`). |
+
+#### Configuration
+
+Set `theme` as a top-level key in `config.yaml`:
+
+```yaml
+theme: cyberpunk   # default | minimalist | cyberpunk | old_fashioned
+```
+
+`config.py` reads this into `Config.theme: str = "default"`. `validate_config()` emits a
+warning (not an error) for unrecognised theme names. `main.py` calls `load_theme(cfg.theme)`
+before render and passes `theme=theme` to `render_dashboard()`.
+
+#### Adding a New Theme
+
+Two steps:
+
+**1. Create `src/render/themes/<name>.py`** with a factory function:
+
+```python
+# src/render/themes/retro.py
+from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
+
+def retro_theme() -> Theme:
+    return Theme(
+        name="retro",
+        layout=ThemeLayout(
+            canvas_w=800, canvas_h=480,
+            header=ComponentRegion(0, 0, 800, 48),
+            week_view=ComponentRegion(0, 48, 800, 312),
+            weather=ComponentRegion(0, 360, 400, 120),
+            birthdays=ComponentRegion(400, 360, 200, 120),
+            info=ComponentRegion(600, 360, 200, 120),
+        ),
+        style=ThemeStyle(
+            invert_header=True,
+            invert_today_col=True,
+            invert_allday_bars=False,
+            spacing_scale=1.2,
+            label_font_size=11,
+            label_font_weight="semibold",
+        ),
+    )
+```
+
+Rules:
+- Component regions must not overlap.
+- `x + w` and `y + h` for every region should stay within `canvas_w` / `canvas_h`.
+- `draw_order` controls Z-order (later entries draw on top). Only include names that
+  have matching fields on `ThemeLayout`.
+- To hide a component: set `visible=False` on its `ComponentRegion`. No other changes
+  needed — `canvas.py` will skip it automatically.
+
+**2. Register the name in `load_theme()` in `src/render/theme.py`:**
+
+```python
+if name == "retro":
+    from src.render.themes.retro import retro_theme
+    return retro_theme()
+```
+
+Also add `"retro"` to `AVAILABLE_THEMES` in the same file:
+
+```python
+AVAILABLE_THEMES: frozenset[str] = frozenset(
+    {"default", "cyberpunk", "minimalist", "old_fashioned", "retro"}
+)
+```
+
+That's all that's required. No changes to components, canvas, or config parsing.
+
+#### Adding a Custom Font to a Theme
+
+1. Place the TTF file(s) in `fonts/`.
+2. Add accessor function(s) to `src/render/fonts.py` following the existing `@lru_cache`
+   pattern (see `regular`, `semibold`, etc.).
+3. Import and assign the accessors in your theme factory:
+
+```python
+from src.render.fonts import my_serif_regular, my_serif_bold
+
+style=ThemeStyle(
+    font_regular=my_serif_regular,
+    font_bold=my_serif_bold,
+    # font_medium and font_semibold will fall back to Plus Jakarta Sans
+)
+```
+
+Font callables left as `None` in `ThemeStyle` are automatically filled from the default
+Plus Jakarta Sans family by `__post_init__`, so you only need to supply the weights you
+actually want to override.
+
+#### Testing a New Theme
+
+The fastest workflow is an inline config dry-run (no config file needed):
+
+```bash
+python -m src.main --dry-run --dummy --config /dev/stdin <<'EOF'
+theme: retro
+display:
+  model: "epd7in5_V2"
+weather:
+  api_key: "dummy"
+  latitude: 40.7
+  longitude: -74.0
+google:
+  service_account_path: "credentials/service_account.json"
+  calendar_id: "dummy@group.calendar.google.com"
+EOF
+# Preview: output/latest.png
+```
+
+Add test cases to `tests/test_themes.py`. At minimum:
+- Call `render_dashboard()` with the new theme and dummy data — verify it returns a
+  `PIL.Image` without raising.
+- Assert `image.size == (layout.canvas_w, layout.canvas_h)` (before display scaling).
+
+#### Key Files
+
+| Changing… | Read first |
+|---|---|
+| Theme data structures | `src/render/theme.py` |
+| Canvas theme dispatch | `src/render/canvas.py` |
+| Any built-in theme | `src/render/themes/<name>.py` |
+| Component region handling | The relevant `src/render/components/<name>.py` |
+| Theme config field | `src/config.py` + `config/config.example.yaml` |
+
 ### Quote Selection
 
 Quotes are selected deterministically by hashing the current date, so the same quote
@@ -476,8 +700,11 @@ Wilde, Twain, and others. Each entry is `{"text": "...", "author": "..."}`.
 
 | Changing… | Read first |
 |---|---|
-| Any component layout | `render/layout.py` |
+| Any component layout | `render/layout.py` (default geometry) + `render/theme.py` (`ThemeLayout`) |
 | Rendering pipeline | `render/canvas.py` |
+| Theme data structures | `render/theme.py` |
+| Built-in theme definitions | `render/themes/<name>.py` |
+| Adding a new theme | See **Adding a New Theme** in the Theme System section above |
 | Config schema | `src/config.py` + `config/config.example.yaml` |
 | Display output / conditional refresh | `display/driver.py` |
 | Partial vs. full refresh tracking | `display/refresh_tracker.py` |
@@ -500,7 +727,7 @@ Wilde, Twain, and others. Each entry is `{"text": "...", "author": "..."}`.
 make test          # pytest tests/ -v
 ```
 
-Twenty-three test files live in `tests/` (541 tests total):
+Twenty-four test files live in `tests/` (578 tests total):
 
 | File | What it covers |
 |---|---|
@@ -528,6 +755,7 @@ Twenty-three test files live in `tests/` (541 tests total):
 | `test_circuit_breaker.py` | Circuit breaker state transitions: closed→open→half_open→closed, half-open probe paths, cooldown edge cases, persistence |
 | `test_quota_tracker.py` | Quota tracker: daily count, auto-reset on new day, warning threshold, persistence, corrupted state, live-instance day rollover |
 | `test_bugfixes.py` | Regression tests: config default consistency, OWM empty-response guards, Feb 29 birthday rendering, circuit breaker UTC timestamps, quiet hours / fetch interval validation |
+| `test_themes.py` | Theme system: `ThemeStyle` defaults and font callables, `ComponentRegion`, `ThemeLayout`, `default_theme`/`load_theme` dispatch, `render_dashboard` with all 4 themes, custom layout, invisible regions, config field parsing, validation warnings |
 
 Use `--dummy` mode and `DryRunDisplay` to test rendering without hardware or live APIs.
 
