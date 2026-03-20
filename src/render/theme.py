@@ -59,6 +59,9 @@ class ThemeLayout:
     info: ComponentRegion = field(
         default_factory=lambda: ComponentRegion(550, 360, 250, 120)
     )
+    today_view: ComponentRegion = field(
+        default_factory=lambda: ComponentRegion(0, 60, 800, 280, visible=False)
+    )
     draw_order: list[str] = field(
         default_factory=lambda: ["header", "week_view", "weather", "birthdays", "info"]
     )
@@ -133,7 +136,7 @@ class Theme:
 # ---------------------------------------------------------------------------
 
 AVAILABLE_THEMES: frozenset[str] = frozenset(
-    {"default", "cyberpunk", "minimalist", "old_fashioned"}
+    {"default", "cyberpunk", "minimalist", "old_fashioned", "today"}
 )
 
 
@@ -180,6 +183,9 @@ def load_theme(name: str) -> Theme:
     if name == "old_fashioned":
         from src.render.themes.old_fashioned import old_fashioned_theme
         return old_fashioned_theme()
+    if name == "today":
+        from src.render.themes.today import today_theme
+        return today_theme()
     raise ValueError(
         f"Unknown theme: {name!r}. Available: {', '.join(sorted(AVAILABLE_THEMES))}"
     )

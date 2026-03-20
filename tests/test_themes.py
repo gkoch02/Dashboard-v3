@@ -217,11 +217,17 @@ class TestLoadTheme:
         with pytest.raises(ValueError, match="Unknown theme"):
             load_theme("nonexistent_theme_xyz")
 
+    def test_loads_today(self):
+        t = load_theme("today")
+        assert isinstance(t, Theme)
+        assert t.name == "today"
+
     def test_available_themes_contains_expected(self):
         assert "default" in AVAILABLE_THEMES
         assert "cyberpunk" in AVAILABLE_THEMES
         assert "minimalist" in AVAILABLE_THEMES
         assert "old_fashioned" in AVAILABLE_THEMES
+        assert "today" in AVAILABLE_THEMES
 
 
 # ---------------------------------------------------------------------------
@@ -288,6 +294,53 @@ class TestRenderDashboardWithThemes:
         assert isinstance(result, Image.Image)
         assert result.mode == "1"
         assert result.size == (800, 480)
+
+    def test_today_theme_produces_valid_image(self):
+        data = _make_data()
+        t = load_theme("today")
+        result = render_dashboard(data, self._cfg(), theme=t)
+        assert isinstance(result, Image.Image)
+        assert result.mode == "1"
+        assert result.size == (800, 480)
+
+    def test_today_theme_hides_week_view(self):
+        """The today theme's week_view region should be invisible."""
+        t = load_theme("today")
+        assert t.layout.week_view.visible is False
+
+    def test_today_theme_shows_today_view(self):
+        """The today theme's today_view region should be visible and in draw_order."""
+        t = load_theme("today")
+        assert t.layout.today_view.visible is True
+        assert "today_view" in t.layout.draw_order
+
+    def test_today_theme_with_events_today(self):
+        """today theme renders correctly when events fall on today."""
+        today = date(2024, 3, 15)
+        data = _make_data(today)
+        # Add an event on today
+        data.events.append(CalendarEvent(
+            summary="Morning Meeting",
+            start=datetime.combine(today, datetime.min.time().replace(hour=9)),
+            end=datetime.combine(today, datetime.min.time().replace(hour=10)),
+        ))
+        t = load_theme("today")
+        result = render_dashboard(data, self._cfg(), theme=t)
+        assert isinstance(result, Image.Image)
+
+    def test_today_theme_with_no_events(self):
+        """today theme renders correctly with an empty event list."""
+        data = _make_data()
+        data.events = []
+        t = load_theme("today")
+        result = render_dashboard(data, self._cfg(), theme=t)
+        assert isinstance(result, Image.Image)
+
+    def test_today_view_default_region_not_visible_in_default_theme(self):
+        """ThemeLayout.today_view defaults to visible=False so existing themes are unaffected."""
+        from src.render.theme import default_layout
+        layout = default_layout()
+        assert layout.today_view.visible is False
 
     def test_custom_layout_positions_components(self):
         """A theme with non-standard layout renders without crashing."""
