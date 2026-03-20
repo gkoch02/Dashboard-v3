@@ -83,7 +83,7 @@ def draw_today(
     draw.text((num_x, num_y), date_num, font=num_font, fill=style.bg)
 
     # Separator between date panel and events
-    vline(draw, events_x, y0, y0 + total_h - 1)
+    vline(draw, events_x, y0, y0 + total_h - 1, fill=style.fg)
 
     # --- Right events panel ---
     today_events = _events_for_today(events, today)
