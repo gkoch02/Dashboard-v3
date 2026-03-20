@@ -44,6 +44,33 @@ def cyber_mono(size: int) -> ImageFont.FreeTypeFont:
     return get_font("ShareTechMono-Regular.ttf", size)
 
 
+# DM Sans — screen-optimised geometric sans for the Minimalist theme.
+# Variable font with optical-size (opsz 9–40) and weight (wght 100–1000) axes.
+# opsz is clamped to the render size so small text auto-uses the screen-optimised cut.
+@lru_cache(maxsize=64)
+def _get_dm_sans(size: int, wght: int) -> ImageFont.FreeTypeFont:
+    font = ImageFont.truetype(str(FONT_DIR / "DMSans.ttf"), size)
+    opsz = max(9, min(40, size))
+    font.set_variation_by_axes([opsz, wght])
+    return font
+
+
+def dm_regular(size: int) -> ImageFont.FreeTypeFont:
+    return _get_dm_sans(size, 400)
+
+
+def dm_medium(size: int) -> ImageFont.FreeTypeFont:
+    return _get_dm_sans(size, 500)
+
+
+def dm_semibold(size: int) -> ImageFont.FreeTypeFont:
+    return _get_dm_sans(size, 600)
+
+
+def dm_bold(size: int) -> ImageFont.FreeTypeFont:
+    return _get_dm_sans(size, 700)
+
+
 # Playfair Display — newspaper serif font for the Old Fashioned theme.
 def playfair_regular(size: int) -> ImageFont.FreeTypeFont:
     return get_font("PlayfairDisplay-Regular.ttf", size)
