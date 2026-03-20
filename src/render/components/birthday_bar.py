@@ -31,11 +31,11 @@ def draw_birthdays(
     pad = L.PAD
 
     # Top border (2px for stronger section separation)
-    hline(draw, y0, x0, x0 + w)
-    hline(draw, y0 + 1, x0, x0 + w)
+    hline(draw, y0, x0, x0 + w, fill=style.fg)
+    hline(draw, y0 + 1, x0, x0 + w, fill=style.fg)
 
     # Right separator
-    vline(draw, x0 + w - 1, y0, y0 + h)
+    vline(draw, x0 + w - 1, y0, y0 + h, fill=style.fg)
 
     # Section label
     label_font = style.label_font()
