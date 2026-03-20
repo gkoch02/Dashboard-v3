@@ -16,7 +16,7 @@ changing proportions, and removing sections entirely. Switch themes with a singl
 `config.yaml`:
 
 ```yaml
-theme: cyberpunk   # default | cyberpunk | minimalist | old_fashioned
+theme: cyberpunk   # default | cyberpunk | minimalist | old_fashioned | today
 ```
 
 ### default
@@ -49,6 +49,16 @@ Weather, birthdays, and the daily quote stack vertically in the right column. A 
 more formal 56px header. Placeholder for an optional serif font.
 
 ![Old Fashioned theme](output/theme_old_fashioned.png)
+
+### today
+
+Focused single-day view. The 7-day grid is replaced by a large inverted date panel
+(day name, 90pt date number, month) on the left and a spacious event list on the right
+— large fonts, full time ranges, and locations all visible without squinting. Taller
+60px header and 140px bottom strip. Ideal for a kitchen or desk display where the
+current day's schedule matters more than the full week.
+
+![Today theme](output/theme_today.png)
 
 ### Creating your own theme
 
@@ -166,7 +176,7 @@ For full details see the **Theme System** section in [`CLAUDE.md`](CLAUDE.md).
 
 ### Themes
 
-- **Four built-in themes** — `default`, `cyberpunk`, `minimalist`, `old_fashioned`
+- **Five built-in themes** — `default`, `cyberpunk`, `minimalist`, `old_fashioned`, `today`
 - **Fully structural** — themes can reposition components, change proportions, and hide
   sections, not just swap colors
 - **Two-line setup** — create a factory function + register a name; no component code
@@ -275,7 +285,7 @@ make setup
 | `weather.latitude` / `longitude` | Your location |
 | `weather.units` | `imperial` (°F) or `metric` (°C) |
 | `timezone` | IANA timezone, e.g. `America/Los_Angeles`. Use `local` for system clock. |
-| `theme` | *(optional)* `default`, `cyberpunk`, `minimalist`, or `old_fashioned` |
+| `theme` | *(optional)* `default`, `cyberpunk`, `minimalist`, `old_fashioned`, or `today` |
 
 ### 3. Preview
 

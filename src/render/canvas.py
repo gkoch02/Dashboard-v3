@@ -3,7 +3,7 @@ from PIL import Image, ImageDraw
 
 from src.data.models import DashboardData
 from src.config import DisplayConfig
-from src.render.components import header, week_view, weather_panel, birthday_bar, info_panel
+from src.render.components import header, week_view, weather_panel, birthday_bar, info_panel, today_view
 from src.render.theme import Theme, default_theme
 
 # Base resolution used when no theme is provided (legacy path).
@@ -70,6 +70,12 @@ def render_dashboard(
         "info": lambda: info_panel.draw_info(
             draw, today,
             region=layout.info,
+            style=style,
+        ),
+        "today_view": lambda: today_view.draw_today(
+            draw, data.events, today,
+            forecast=week_forecast,
+            region=layout.today_view,
             style=style,
         ),
     }
