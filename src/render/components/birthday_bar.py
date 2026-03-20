@@ -5,16 +5,29 @@ from src.data.models import Birthday
 from src.render import layout as L
 from src.render.fonts import semibold, medium, regular, bold
 from src.render.primitives import BLACK, WHITE, hline, vline, filled_rect, draw_text_truncated
+from src.render.theme import ComponentRegion, ThemeStyle
 
 # Milestone ages rendered with extra emphasis
 _MILESTONE_AGES = {18, 21, 25, 30, 40, 50, 60, 65, 70, 75, 80, 90, 100}
 
 
-def draw_birthdays(draw: ImageDraw.ImageDraw, birthdays: list[Birthday], today: date):
-    x0 = L.BIRTHDAY_X
-    y0 = L.BIRTHDAY_Y
-    w = L.BIRTHDAY_W
-    h = L.BIRTHDAY_H
+def draw_birthdays(
+    draw: ImageDraw.ImageDraw,
+    birthdays: list[Birthday],
+    today: date,
+    *,
+    region: ComponentRegion | None = None,
+    style: ThemeStyle | None = None,
+):
+    if region is None:
+        region = ComponentRegion(L.BIRTHDAY_X, L.BIRTHDAY_Y, L.BIRTHDAY_W, L.BIRTHDAY_H)
+    if style is None:
+        style = ThemeStyle()
+
+    x0 = region.x
+    y0 = region.y
+    w = region.w
+    h = region.h
     pad = L.PAD
 
     # Top border (2px for stronger section separation)
@@ -25,16 +38,16 @@ def draw_birthdays(draw: ImageDraw.ImageDraw, birthdays: list[Birthday], today: 
     vline(draw, x0 + w - 1, y0, y0 + h)
 
     # Section label
-    label_font = bold(12)
-    draw.text((x0 + pad, y0 + pad), "BIRTHDAYS", font=label_font, fill=BLACK)
+    label_font = style.label_font()
+    draw.text((x0 + pad, y0 + pad), "BIRTHDAYS", font=label_font, fill=style.fg)
 
     if not birthdays:
-        empty_font = regular(12)
-        draw.text((x0 + pad, y0 + 32), "No upcoming birthdays", font=empty_font, fill=BLACK)
+        empty_font = style.font_regular(12)
+        draw.text((x0 + pad, y0 + 32), "No upcoming birthdays", font=empty_font, fill=style.fg)
         return
 
-    name_font = medium(13)
-    milestone_font = bold(13)
+    name_font = style.font_medium(13)
+    milestone_font = style.font_bold(13)
     y = y0 + 32
     max_entries = 3
     line_h = 22
@@ -64,7 +77,7 @@ def draw_birthdays(draw: ImageDraw.ImageDraw, birthdays: list[Birthday], today: 
         else:
             countdown = f"in {days_until}d"
 
-        # Feature 6: milestone badge — append age indicator when it's a notable age
+        # Milestone badge — append age indicator when it's a notable age
         is_milestone = bday.age is not None and bday.age in _MILESTONE_AGES
         entry = f"{countdown} — {bday.name}"
         if bday.age is not None:
@@ -79,22 +92,26 @@ def draw_birthdays(draw: ImageDraw.ImageDraw, birthdays: list[Birthday], today: 
         if is_today_bday or is_milestone:
             # Invert the entire row to celebrate the birthday or milestone
             row_rect = (x0 + pad - 1, y - 1, x0 + w - pad - 1, y + line_h - 2)
-            filled_rect(draw, row_rect, fill=BLACK)
-            draw.ellipse((x0 + pad, y + 5, x0 + pad + 5, y + 10), fill=WHITE)
-            draw_text_truncated(draw, (x0 + pad + 12, y), entry, font, w - pad * 2 - 14, fill=WHITE)
+            filled_rect(draw, row_rect, fill=style.fg)
+            draw.ellipse((x0 + pad, y + 5, x0 + pad + 5, y + 10), fill=style.bg)
+            draw_text_truncated(
+                draw, (x0 + pad + 12, y), entry, font, w - pad * 2 - 14, fill=style.bg,
+            )
         else:
-            draw.ellipse((x0 + pad, y + 5, x0 + pad + 5, y + 10), fill=BLACK)
-            draw_text_truncated(draw, (x0 + pad + 12, y), entry, font, w - pad * 2 - 14, fill=BLACK)
+            draw.ellipse((x0 + pad, y + 5, x0 + pad + 5, y + 10), fill=style.fg)
+            draw_text_truncated(
+                draw, (x0 + pad + 12, y), entry, font, w - pad * 2 - 14, fill=style.fg,
+            )
 
         y += line_h
 
-    # Feature 5: overflow count — show how many birthdays didn't fit
+    # Overflow count — show how many birthdays didn't fit
     overflow = len(birthdays) - max_entries
     if overflow > 0:
-        overflow_font = regular(11)
+        overflow_font = style.font_regular(11)
         overflow_h = 14  # approximate height for regular(11)
         if y + overflow_h <= y0 + h - pad:
             draw.text(
                 (x0 + pad + 12, y), f"+{overflow} more upcoming",
-                font=overflow_font, fill=BLACK,
+                font=overflow_font, fill=style.fg,
             )

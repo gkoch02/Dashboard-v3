@@ -73,3 +73,7 @@ logging:
 
 # Dashboard title displayed in the header bar.
 # title: "Home Dashboard"
+
+# UI theme — controls overall layout, proportions, and visual style.
+# Options: default, minimalist, cyberpunk, old_fashioned
+# theme: default

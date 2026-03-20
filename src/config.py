@@ -85,6 +85,7 @@ class Config:
     filters: FilterConfig = field(default_factory=FilterConfig)
     cache: CacheConfig = field(default_factory=CacheConfig)
     title: str = "Home Dashboard"
+    theme: str = "default"
     output_dir: str = "output"
     log_level: str = "INFO"
     timezone: str = "local"
@@ -195,6 +196,9 @@ def load_config(path: str = "config/config.yaml") -> Config:
     if "title" in raw:
         cfg.title = raw["title"]
 
+    if "theme" in raw:
+        cfg.theme = str(raw["theme"])
+
     if "timezone" in raw:
         cfg.timezone = raw["timezone"]
 
@@ -288,6 +292,15 @@ def validate_config(
                 hint="Use a valid name like 'America/Los_Angeles' or 'UTC'. "
                      "See: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
             ))
+
+    # --- Theme ---
+    from src.render.theme import AVAILABLE_THEMES
+    if cfg.theme not in AVAILABLE_THEMES:
+        warnings.append(ConfigWarning(
+            field="theme",
+            message=f"Unknown theme: '{cfg.theme}'",
+            hint=f"Available themes: {', '.join(sorted(AVAILABLE_THEMES))}",
+        ))
 
     # --- Display model ---
     from src.display.driver import WAVESHARE_MODELS

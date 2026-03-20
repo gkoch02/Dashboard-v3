@@ -11,8 +11,12 @@ from src.render.primitives import (
     BLACK, WHITE, hline, vline, dashed_vline, filled_rect,
     draw_text_truncated, draw_text_wrapped, text_height, text_width,
 )
+from src.render.theme import ComponentRegion, ThemeStyle
 
 PAD = L.PAD_SM + 1  # 5px inner padding for columns
+
+# Number of days in a week (not a layout detail — always 7)
+_COL_COUNT = 7
 
 # Default maximum number of busy-ness dots shown in a day header
 _DEFAULT_MAX_DOTS = 5
@@ -40,29 +44,33 @@ def _density_tier(event_count: int, is_weekend: bool) -> str:
     return "normal"
 
 
-def _fonts_for_tier(tier: str) -> tuple:
+def _fonts_for_tier(tier: str, style: ThemeStyle | None = None) -> tuple:
     """Return rendering parameters for the given density tier.
 
     Returns ``(time_font, title_font, allday_font, event_spacing,
     max_title_lines, show_location, allday_pad)``.
     """
+    if style is None:
+        style = ThemeStyle()
+
+    scale = style.spacing_scale
     if tier == "dense":
         return (
-            regular(9), medium(11),
-            semibold(11),
-            2, 1, False, 4,
+            style.font_regular(9), style.font_medium(11),
+            style.font_semibold(11),
+            max(1, int(2 * scale)), 1, False, 4,
         )
     if tier == "compact":
         return (
-            regular(10), medium(12),
-            semibold(11),
-            3, 1, False, 4,
+            style.font_regular(10), style.font_medium(12),
+            style.font_semibold(11),
+            max(1, int(3 * scale)), 1, False, 4,
         )
     # normal
     return (
-        regular(11), semibold(14),
-        semibold(13),
-        6, 2, True, 6,
+        style.font_regular(11), style.font_semibold(14),
+        style.font_semibold(13),
+        max(1, int(6 * scale)), 2, True, 6,
     )
 
 
@@ -78,6 +86,9 @@ def draw_week(
     today: date,
     forecast: list[DayForecast] | None = None,
     max_busy_dots: int = _DEFAULT_MAX_DOTS,
+    *,
+    region: ComponentRegion | None = None,
+    style: ThemeStyle | None = None,
 ):
     """Draw the 7-day calendar grid starting from the Monday of the current week.
 
@@ -86,6 +97,28 @@ def draw_week(
 
     *max_busy_dots* controls the cap on busy-ness dots per column header.
     """
+    if region is None:
+        region = ComponentRegion(L.WEEK_X, L.WEEK_Y, L.WEEK_W, L.WEEK_H)
+    if style is None:
+        style = ThemeStyle()
+
+    x0 = region.x
+    y0 = region.y
+    total_w = region.w
+    total_h = region.h
+
+    # Compute derived layout values proportionally from the region
+    header_h = max(24, total_h * 32 // 320)   # 32px at 320h → scales proportionally
+    body_h = total_h - header_h
+    body_top = y0 + header_h
+
+    # Column widths: 7 equal columns; last absorbs rounding remainder
+    col_w_base = total_w // _COL_COUNT
+    last_col_w = total_w - col_w_base * (_COL_COUNT - 1)
+
+    # Weekend date section: lower 50% of body (as in original)
+    date_section_h = body_h // 2
+
     # Find Monday of this week (weekday() == 0 for Monday)
     week_start = today - timedelta(days=today.weekday())
 
@@ -95,188 +128,181 @@ def draw_week(
         for fc in forecast:
             forecast_by_date[fc.date] = fc
 
-    header_h = L.WEEK_HEADER_H
-    x0 = L.WEEK_X
-    y0 = L.WEEK_Y
-    body_top = y0 + header_h
-    body_h = L.WEEK_H - header_h
+    day_label_font = style.font_semibold(11)
+    day_num_font = style.font_bold(16)
 
-    day_label_font = semibold(11)
-    day_num_font = bold(16)
-
-    date_section_h = L.WEEK_DATE_SECTION_H
-    date_section_font = bold(100)
+    date_section_font = style.font_bold(100)
     date_y = body_top + body_h - date_section_h  # top of combined date cell
 
     # Saturday is col 5 (Mon=0 … Sat=5, Sun=6)
     SAT_COL = 5
-    sat_cx = x0 + SAT_COL * L.WEEK_COL_W
-    combined_date_w = L.WEEK_COL_W + L.WEEK_LAST_COL_W  # 114 + 116 = 230px
+    sat_cx = x0 + SAT_COL * col_w_base
+    combined_date_w = col_w_base + last_col_w   # last two columns merged
 
     week_end = week_start + timedelta(days=7)
 
     # --- Multi-day spanning event bars (rendered above per-day content) ---
     spanning = _collect_spanning_events(events, week_start, week_end)
-    spanning_ids: set[str | None] = set()  # track which events are rendered as spanning
-    allday_font = semibold(13)
+    spanning_ids: set[str | None] = set()
+    allday_font = style.font_semibold(13)
     span_bar_h = text_height(allday_font) + 6
     span_spacing = 2
     span_total_h = 0
     if spanning:
         for evt, first_col, last_col in spanning:
-            # Mark event so it's excluded from per-day single-col rendering
             spanning_ids.add(id(evt))
 
             bar_y = body_top + PAD + span_total_h
-            bar_x0 = x0 + first_col * L.WEEK_COL_W + PAD - 1
-            last_col_w = L.WEEK_LAST_COL_W if last_col == L.WEEK_COL_COUNT - 1 else L.WEEK_COL_W
-            bar_x1 = x0 + last_col * L.WEEK_COL_W + last_col_w - PAD
+            bar_x0 = x0 + first_col * col_w_base + PAD - 1
+            this_last_col_w = last_col_w if last_col == _COL_COUNT - 1 else col_w_base
+            bar_x1 = x0 + last_col * col_w_base + this_last_col_w - PAD
 
-            filled_rect(draw, (bar_x0, bar_y, bar_x1, bar_y + span_bar_h), fill=BLACK)
-            bar_text_w = bar_x1 - bar_x0 - PAD * 2
-            draw_text_truncated(
-                draw, (bar_x0 + PAD, bar_y + 3),
-                evt.summary, allday_font, bar_text_w, fill=WHITE,
-            )
+            if style.invert_allday_bars:
+                filled_rect(draw, (bar_x0, bar_y, bar_x1, bar_y + span_bar_h), fill=style.fg)
+                bar_text_w = bar_x1 - bar_x0 - PAD * 2
+                draw_text_truncated(
+                    draw, (bar_x0 + PAD, bar_y + 3),
+                    evt.summary, allday_font, bar_text_w, fill=style.bg,
+                )
+            else:
+                draw.rectangle((bar_x0, bar_y, bar_x1, bar_y + span_bar_h), outline=style.fg)
+                bar_text_w = bar_x1 - bar_x0 - PAD * 2
+                draw_text_truncated(
+                    draw, (bar_x0 + PAD, bar_y + 3),
+                    evt.summary, allday_font, bar_text_w, fill=style.fg,
+                )
             span_total_h += span_bar_h + span_spacing
 
-    for col in range(L.WEEK_COL_COUNT):
+    for col in range(_COL_COUNT):
         day = week_start + timedelta(days=col)
-        col_w = L.WEEK_LAST_COL_W if col == L.WEEK_COL_COUNT - 1 else L.WEEK_COL_W
-        cx = x0 + col * L.WEEK_COL_W
+        col_w = last_col_w if col == _COL_COUNT - 1 else col_w_base
+        cx = x0 + col * col_w_base
         is_today = day == today
 
-        # Pre-compute events for this day — used for both busy dots and event drawing
+        # Pre-compute events for this day
         day_events = _events_for_day(events, day)
 
         # Column header
         day_abbr = day.strftime("%a").upper()
         day_num = str(day.day)
-        header_text = f"{day_abbr} {day_num}"
 
         is_weekend = day.weekday() >= 5  # Sat=5, Sun=6
 
-        if is_today:
+        if is_today and style.invert_today_col:
             # Inverted header for today
-            filled_rect(draw, (cx, y0, cx + col_w - 1, y0 + header_h - 1), fill=BLACK)
-            fnt = bold(16)
+            filled_rect(draw, (cx, y0, cx + col_w - 1, y0 + header_h - 1), fill=style.fg)
+            fnt = style.font_bold(16)
             num_bb = draw.textbbox((0, 0), day_num, font=fnt)
             abbr_bb = draw.textbbox((0, 0), day_abbr, font=fnt)
             num_ink_h = num_bb[3] - num_bb[1]
             ty_num = y0 + (header_h - num_ink_h) // 2 - num_bb[1]
             ty_abbr = ty_num + num_bb[3] - abbr_bb[3]
-            draw.text((cx + PAD, ty_abbr), day_abbr, font=fnt, fill=WHITE)
+            draw.text((cx + PAD, ty_abbr), day_abbr, font=fnt, fill=style.bg)
             abbr_w = text_width(draw, day_abbr + " ", fnt)
-            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=WHITE)
+            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=style.bg)
         elif is_weekend:
             # Weekend: lighter styling — regular weight instead of semibold
-            wknd_abbr_font = regular(11)
-            wknd_num_font = regular(16)
+            wknd_abbr_font = style.font_regular(11)
+            wknd_num_font = style.font_regular(16)
             num_bb = draw.textbbox((0, 0), day_num, font=wknd_num_font)
             abbr_bb = draw.textbbox((0, 0), day_abbr, font=wknd_abbr_font)
             num_ink_h = num_bb[3] - num_bb[1]
             ty_num = y0 + (header_h - num_ink_h) // 2 - num_bb[1]
             ty_abbr = ty_num + num_bb[3] - abbr_bb[3]
-            draw.text((cx + PAD, ty_abbr), day_abbr, font=wknd_abbr_font, fill=BLACK)
+            draw.text((cx + PAD, ty_abbr), day_abbr, font=wknd_abbr_font, fill=style.fg)
             abbr_w = text_width(draw, day_abbr + " ", wknd_abbr_font)
-            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=wknd_num_font, fill=BLACK)
+            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=wknd_num_font, fill=style.fg)
         else:
+            # Weekday (not today)
             num_bb = draw.textbbox((0, 0), day_num, font=day_num_font)
             abbr_bb = draw.textbbox((0, 0), day_abbr, font=day_label_font)
             num_ink_h = num_bb[3] - num_bb[1]
             ty_num = y0 + (header_h - num_ink_h) // 2 - num_bb[1]
             ty_abbr = ty_num + num_bb[3] - abbr_bb[3]
-            draw.text((cx + PAD, ty_abbr), day_abbr, font=day_label_font, fill=BLACK)
+            draw.text((cx + PAD, ty_abbr), day_abbr, font=day_label_font, fill=style.fg)
             abbr_w = text_width(draw, day_abbr + " ", day_label_font)
-            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=day_num_font, fill=BLACK)
+            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=day_num_font, fill=style.fg)
 
-        # Small forecast icon in column header (between day label and busy dots)
+        # Small forecast icon in column header
         fc = forecast_by_date.get(day)
         if fc:
             _FORECAST_ICON_SIZE = 12
-            # Position: right of header text, vertically centred in header
             icon_x = (
                 cx + col_w - PAD
                 - (max_busy_dots * (_DOT_SIZE + _DOT_GAP))
                 - _FORECAST_ICON_SIZE - 4
             )
             icon_y = y0 + (header_h - _FORECAST_ICON_SIZE) // 2
-            icon_fill = WHITE if is_today else BLACK
+            icon_fill = style.bg if (is_today and style.invert_today_col) else style.fg
             draw_weather_icon(
                 draw, (icon_x, icon_y), fc.icon,
                 size=_FORECAST_ICON_SIZE, fill=icon_fill,
             )
 
-        # Busy-ness dots: one filled square per event (capped at max_busy_dots), right-aligned
-        _draw_busy_dots(draw, len(day_events), cx, y0, col_w, header_h, is_today, max_busy_dots)
+        # Busy-ness dots
+        _draw_busy_dots(draw, len(day_events), cx, y0, col_w, header_h, is_today, max_busy_dots,
+                        style=style)
 
         # Header underline
         hline(draw, y0 + header_h - 1, cx, cx + col_w - 1)
 
-        # Column separator (right edge).
-        # Between Sat and Sun, stop above the merged date cell.
-        # Friday's right edge (= Saturday's left edge) also stops at the date
-        # cell so we can draw a solid border around the combined date section.
-        # Solid through the header band; dashed in the event body for a lighter grid.
+        # Column separator (right edge)
         FRI_COL = SAT_COL - 1
-        if col < L.WEEK_COL_COUNT - 1:
-            sep_bottom = (date_y - 1) if col in (FRI_COL, SAT_COL) else (y0 + L.WEEK_H - 1)
+        if col < _COL_COUNT - 1:
+            sep_bottom = (date_y - 1) if col in (FRI_COL, SAT_COL) else (y0 + total_h - 1)
             vline(draw, cx + col_w - 1, y0, y0 + header_h - 1)
             dashed_vline(draw, cx + col_w - 1, body_top, sep_bottom)
 
-        # Events — weekend columns give up their bottom 25% to the shared date cell.
-        # Offset below any spanning bars that were drawn across the top.
+        # Events — weekend columns give up their bottom 50% to the shared date cell
         events_body_h = (body_h - date_section_h) if is_weekend else body_h
         events_y_start = body_top + span_total_h
         adjusted_body_h = events_body_h - span_total_h
 
-        # Exclude multi-day spanning events (already drawn as continuous bars)
         day_events_filtered = [e for e in day_events if id(e) not in spanning_ids]
 
         if day_events_filtered:
             tier = _density_tier(len(day_events_filtered), is_weekend)
             (t_font, ti_font, ad_font,
-             spacing, max_lines, show_loc, ad_pad) = _fonts_for_tier(tier)
+             spacing, max_lines, show_loc, ad_pad) = _fonts_for_tier(tier, style)
             _draw_day_events(
                 draw, day_events_filtered, cx, events_y_start,
                 col_w, adjusted_body_h, t_font, ti_font,
                 allday_font=ad_font, event_spacing=spacing,
                 max_title_lines=max_lines, show_location=show_loc,
-                allday_pad=ad_pad,
+                allday_pad=ad_pad, style=style,
             )
         elif not day_events:  # only show dash if truly empty (no spanning events either)
-            # Subtle empty indicator centred in the column
-            empty_font = regular(12)
+            empty_font = style.font_regular(12)
             dash = "–"
             dw = text_width(draw, dash, empty_font)
             dh = text_height(empty_font)
             draw.text(
                 (cx + (col_w - dw) // 2, events_y_start + adjusted_body_h // 3 - dh // 2),
-                dash, font=empty_font, fill=BLACK,
+                dash, font=empty_font, fill=style.fg,
             )
 
     # Solid left border for the combined date cell (Saturday's left edge)
-    vline(draw, sat_cx, date_y, y0 + L.WEEK_H - 1)
+    vline(draw, sat_cx, date_y, y0 + total_h - 1)
 
     # Combined "Today" cell — inverted month header, normal day number
-    month_font = bold(33)
+    month_font = style.font_bold(33)
     month_text = today.strftime("%B").upper()
     mbb = draw.textbbox((0, 0), month_text, font=month_font)
     month_w = mbb[2] - mbb[0]
     month_h = mbb[3] - mbb[1]
     month_band_h = month_h + PAD * 2
 
-    # Black band for month header
+    # Inverted black band for month header
     filled_rect(
         draw,
         (sat_cx, date_y, sat_cx + combined_date_w - 1, date_y + month_band_h - 1),
-        fill=BLACK,
+        fill=style.fg,
     )
     month_x = sat_cx + (combined_date_w - month_w) // 2 - mbb[0]
     month_y = date_y + (month_band_h - month_h) // 2 - mbb[1]
-    draw.text((month_x, month_y), month_text, font=month_font, fill=WHITE)
+    draw.text((month_x, month_y), month_text, font=month_font, fill=style.bg)
 
-    # Day number — black on white, centered in the remaining space below the band
+    # Day number — centred in the remaining space below the band
     day_area_y = date_y + month_band_h
     day_area_h = date_section_h - month_band_h
     dn_text = str(today.day)
@@ -285,7 +311,7 @@ def draw_week(
     dn_h = dbb[3] - dbb[1]
     dn_x = sat_cx + (combined_date_w - dn_w) // 2 - dbb[0]
     dn_y = day_area_y + (day_area_h - dn_h) // 2 - dbb[1]
-    draw.text((dn_x, dn_y), dn_text, font=date_section_font, fill=BLACK)
+    draw.text((dn_x, dn_y), dn_text, font=date_section_font, fill=style.fg)
 
 
 def _draw_busy_dots(
@@ -297,19 +323,20 @@ def _draw_busy_dots(
     header_h: int,
     is_today: bool,
     max_dots: int = _DEFAULT_MAX_DOTS,
+    *,
+    style: ThemeStyle | None = None,
 ) -> None:
-    """Draw filled 3×3 squares right-aligned in the header to indicate how busy a day is.
-
-    One dot per event, capped at max_dots.  Color is inverted for the today column.
-    """
+    """Draw filled 3×3 squares right-aligned in the header to indicate how busy a day is."""
     if event_count == 0:
         return
+    if style is None:
+        style = ThemeStyle()
 
     n_dots = min(event_count, max_dots)
     total_w = n_dots * _DOT_SIZE + (n_dots - 1) * _DOT_GAP
     dot_x = cx + col_w - PAD - total_w
     dot_y = y0 + (header_h - _DOT_SIZE) // 2
-    dot_fill = WHITE if is_today else BLACK
+    dot_fill = style.bg if (is_today and style.invert_today_col) else style.fg
 
     for i in range(n_dots):
         dx = dot_x + i * (_DOT_SIZE + _DOT_GAP)
@@ -344,7 +371,6 @@ def _collect_spanning_events(
         if not _is_multiday(e):
             continue
         start_d, end_d = _event_date_range(e)
-        # Clamp to visible week
         vis_start = max(start_d, week_start)
         vis_end = min(end_d, week_end)  # end_d is exclusive
         if vis_start >= vis_end:
@@ -387,56 +413,67 @@ def _draw_day_events(
     max_title_lines: int = 2,
     show_location: bool = True,
     allday_pad: int = 6,
+    style: ThemeStyle | None = None,
 ):
+    if style is None:
+        style = ThemeStyle()
     if allday_font is None:
-        allday_font = semibold(13)
+        allday_font = style.font_semibold(13)
 
     y = y_start + PAD + 1
     max_w = col_w - PAD * 2 - 1
     time_h = text_height(time_font)
     title_h = text_height(title_font)
-    loc_font = regular(10)
+    loc_font = style.font_regular(10)
     loc_h = text_height(loc_font)
 
     for idx, event in enumerate(events):
         if y - y_start + title_h > max_h - PAD:
-            # Draw overflow indicator with remaining count
             remaining = len(events) - idx
-            draw.text((cx + PAD, y), f"+{remaining} more", font=time_font, fill=BLACK)
+            draw.text((cx + PAD, y), f"+{remaining} more", font=time_font, fill=style.fg)
             break
 
         if event.is_all_day:
-            # All-day: filled bar with white text
             bar_h = text_height(allday_font) + allday_pad
-            filled_rect(draw, (cx + PAD - 1, y, cx + col_w - PAD, y + bar_h), fill=BLACK)
-            draw_text_truncated(
-                draw, (cx + PAD + 2, y + allday_pad // 2),
-                event.summary, allday_font, max_w - 6, fill=WHITE,
-            )
+            if style.invert_allday_bars:
+                filled_rect(
+                    draw, (cx + PAD - 1, y, cx + col_w - PAD, y + bar_h), fill=style.fg,
+                )
+                draw_text_truncated(
+                    draw, (cx + PAD + 2, y + allday_pad // 2),
+                    event.summary, allday_font, max_w - 6, fill=style.bg,
+                )
+            else:
+                draw.rectangle(
+                    (cx + PAD - 1, y, cx + col_w - PAD, y + bar_h), outline=style.fg,
+                )
+                draw_text_truncated(
+                    draw, (cx + PAD + 2, y + allday_pad // 2),
+                    event.summary, allday_font, max_w - 6, fill=style.fg,
+                )
             y += bar_h + event_spacing
         else:
-            # Timed event: "9–9:30a" style time range, title below, optional location
             start_s = _fmt_time(event.start)
             end_s = _fmt_time(event.end)
-            # Only show end if it differs and fits; drop shared am/pm from start
             if event.start.strftime("%p") == event.end.strftime("%p"):
                 start_s = start_s.rstrip("ap")
             time_str = f"{start_s}–{end_s}"
-            draw_text_truncated(draw, (cx + PAD, y), time_str, time_font, max_w, fill=BLACK)
+            draw_text_truncated(
+                draw, (cx + PAD, y), time_str, time_font, max_w, fill=style.fg,
+            )
             y += time_h + 1
             used_h = draw_text_wrapped(
                 draw, (cx + PAD, y), event.summary, title_font,
-                max_w, max_lines=max_title_lines, line_spacing=1, fill=BLACK,
+                max_w, max_lines=max_title_lines, line_spacing=1, fill=style.fg,
             )
             y += max(used_h, title_h)
 
-            # Location line — only in normal density when there's room
             if show_location and event.location:
                 loc_text = event.location.split(",")[0].strip()
                 if loc_text and y - y_start + loc_h <= max_h - PAD:
                     y += 1
                     draw_text_truncated(
-                        draw, (cx + PAD, y), loc_text, loc_font, max_w, fill=BLACK,
+                        draw, (cx + PAD, y), loc_text, loc_font, max_w, fill=style.fg,
                     )
                     y += loc_h
 

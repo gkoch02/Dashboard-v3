@@ -111,11 +111,12 @@ class TestDrawBirthdays:
         assert img_today.tobytes() != img_future.tobytes()
 
     def test_early_break_when_layout_too_small(self):
-        """The break in _draw_day_events fires when y + line_h exceeds available space (line 44).
+        """The break fires when y + line_h exceeds available space (line 43).
 
-        Achieved by patching BIRTHDAY_H to a small value so the condition triggers.
+        Achieved by passing a small region (h=50) so the condition triggers:
+        y = y0+32, line_h=22, h=50, pad=8 → 32+22=54 > 50-8=42 → break at i=0
         """
-        from unittest.mock import patch
+        from src.render.theme import ComponentRegion
         today = date(2024, 3, 15)
         birthdays = [
             Birthday(name="Alice", date=today + timedelta(days=1)),
@@ -123,13 +124,6 @@ class TestDrawBirthdays:
             Birthday(name="Carol", date=today + timedelta(days=3)),
         ]
         img, draw = _make_draw()
-        # Set BIRTHDAY_H to 50 so y+line_h > y0+h-pad fires during first iteration:
-        # y = y0+32, line_h=22, h=50, pad=8 → 32+22=54 > 50-8=42 → break at i=0
-        import src.render.layout as layout_mod
-        original_h = layout_mod.BIRTHDAY_H
-        layout_mod.BIRTHDAY_H = 50
-        try:
-            draw_birthdays(draw, birthdays, today)
-        finally:
-            layout_mod.BIRTHDAY_H = original_h
+        small_region = ComponentRegion(x=300, y=360, w=250, h=50)
+        draw_birthdays(draw, birthdays, today, region=small_region)
         assert img.getbbox() is not None

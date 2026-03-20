@@ -9,13 +9,26 @@ from src.render.primitives import BLACK, WHITE, filled_rect, hline, text_width, 
 from src.render.icons import draw_weather_icon
 from src.render.moon import moon_phase_glyph
 from src.fetchers.weather import deg_to_compass
+from src.render.theme import ComponentRegion, ThemeStyle
 
 
-def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: date | None = None):
-    x0 = L.WEATHER_X
-    y0 = L.WEATHER_Y
-    w = L.WEATHER_W
-    h = L.WEATHER_H
+def draw_weather(
+    draw: ImageDraw.ImageDraw,
+    weather: WeatherData | None,
+    today: date | None = None,
+    *,
+    region: ComponentRegion | None = None,
+    style: ThemeStyle | None = None,
+):
+    if region is None:
+        region = ComponentRegion(L.WEATHER_X, L.WEATHER_Y, L.WEATHER_W, L.WEATHER_H)
+    if style is None:
+        style = ThemeStyle()
+
+    x0 = region.x
+    y0 = region.y
+    w = region.w
+    h = region.h
     pad = L.PAD
 
     # Top border (2px for stronger section separation)
@@ -26,64 +39,73 @@ def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: 
     vline(draw, x0 + w - 1, y0, y0 + h)
 
     # Section label + moon phase icon
-    label_font = bold(12)
-    draw.text((x0 + pad, y0 + pad), "WEATHER", font=label_font, fill=BLACK)
+    label_font = style.label_font()
+    draw.text((x0 + pad, y0 + pad), "WEATHER", font=label_font, fill=style.fg)
 
     if today is not None:
         moon_glyph = moon_phase_glyph(today)
         moon_size = 20
         moon_font = weather_icon_font(moon_size)
-        # Right-justify the moon icon within the weather panel, same vertical
-        # level as the "WEATHER" label.
         label_bbox = draw.textbbox((0, 0), "WEATHER", font=label_font)
         label_mid_y = y0 + pad + label_bbox[1] + (label_bbox[3] - label_bbox[1]) // 2
         moon_bbox = draw.textbbox((0, 0), moon_glyph, font=moon_font)
         moon_glyph_w = moon_bbox[2] - moon_bbox[0]
         moon_y = label_mid_y - (moon_bbox[3] - moon_bbox[1]) // 2 - moon_bbox[1]
         moon_x = x0 + w - pad - moon_glyph_w - moon_bbox[0] - 2  # 2px inside right separator
-        draw.text((moon_x, moon_y), moon_glyph, font=moon_font, fill=BLACK)
+        draw.text((moon_x, moon_y), moon_glyph, font=moon_font, fill=style.fg)
 
     if weather is None:
-        msg_font = regular(13)
+        msg_font = style.font_regular(13)
         msg = "Unavailable"
         bbox = draw.textbbox((0, 0), msg, font=msg_font)
         mw = bbox[2] - bbox[0]
         mh = bbox[3] - bbox[1]
-        draw.text((x0 + (w - mw) // 2, y0 + (h - mh) // 2), msg, font=msg_font, fill=BLACK)
+        draw.text((x0 + (w - mw) // 2, y0 + (h - mh) // 2), msg, font=msg_font, fill=style.fg)
         return
 
-    # Weather icon (left side) — extra left pad to avoid clipping
-    icon_x = x0 + L.WEATHER_ICON_X_OFFSET
-    icon_y = y0 + L.WEATHER_CONTENT_Y_OFFSET
-    draw_weather_icon(draw, (icon_x, icon_y), weather.current_icon, size=40)
+    # Internal layout computed proportionally from the region dimensions.
+    # Reference proportions are based on the original 300×120 weather panel.
+    icon_x_offset = int(w * 0.04)    # ~12px at 300w
+    temp_x_offset = int(w * 0.26)    # ~78px at 300w
+    detail_x_offset = int(w * 0.513) # ~154px at 300w
+    forecast_h = int(h * 0.317)      # ~38px at 120h
+    content_y_offset = int(h * 0.233)  # ~28px at 120h
+    hilo_y_offset = content_y_offset + int(h * 0.117)   # ~14px step = row 2
+    detail3_y_offset = content_y_offset + int(h * 0.217)  # ~26px step = row 3
+    detail4_y_offset = content_y_offset + int(h * 0.317)  # ~38px step = row 4
+
+    # Weather icon (left side)
+    icon_x = x0 + icon_x_offset
+    icon_y = y0 + content_y_offset
+    draw_weather_icon(draw, (icon_x, icon_y), weather.current_icon, size=40, fill=style.fg)
 
     # Temperature (big) — right of icon
-    temp_font = bold(36)
+    temp_font = style.font_bold(36)
     temp_str = f"{weather.current_temp:.0f}°"
-    draw.text((x0 + L.WEATHER_TEMP_X_OFFSET, icon_y - 2), temp_str, font=temp_font, fill=BLACK)
+    draw.text((x0 + temp_x_offset, icon_y - 2), temp_str, font=temp_font, fill=style.fg)
 
     # Right-column detail rows
-    right_x = x0 + L.WEATHER_DETAIL_X_OFFSET
+    right_x = x0 + detail_x_offset
 
     # Row 1: description
-    desc_font = medium(13)
+    desc_font = style.font_medium(13)
     draw.text(
-        (right_x, y0 + L.WEATHER_CONTENT_Y_OFFSET),
-        weather.current_description.title(), font=desc_font, fill=BLACK,
+        (right_x, y0 + content_y_offset),
+        weather.current_description.title(), font=desc_font, fill=style.fg,
     )
 
     # Row 2: hi/lo + UV index when available
-    hilo_font = medium(12)
+    hilo_font = style.font_medium(12)
     hilo_str = f"H:{weather.high:.0f}°  L:{weather.low:.0f}°"
     if weather.uv_index is not None:
         uv_suffix = f"  UV:{weather.uv_index:.0f}"
-        max_detail_w = w - L.WEATHER_DETAIL_X_OFFSET - pad
+        max_detail_w = w - detail_x_offset - pad
         if text_width(draw, hilo_str + uv_suffix, hilo_font) <= max_detail_w:
             hilo_str += uv_suffix
-    draw.text((right_x, y0 + L.WEATHER_HILO_Y_OFFSET), hilo_str, font=hilo_font, fill=BLACK)
+    draw.text((right_x, y0 + hilo_y_offset), hilo_str, font=hilo_font, fill=style.fg)
 
-    # Row 3: feels-like + wind speed (Feature 1)
-    detail3_font = regular(11)
+    # Row 3: feels-like + wind speed
+    detail3_font = style.font_regular(11)
     detail3_parts: list[str] = []
     if weather.feels_like is not None:
         detail3_parts.append(f"Feels {weather.feels_like:.0f}°")
@@ -94,17 +116,16 @@ def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: 
         detail3_parts.append(wind_str)
     if detail3_parts:
         draw.text(
-            (right_x, y0 + L.WEATHER_DETAIL3_Y_OFFSET),
-            "  ·  ".join(detail3_parts), font=detail3_font, fill=BLACK,
+            (right_x, y0 + detail3_y_offset),
+            "  ·  ".join(detail3_parts), font=detail3_font, fill=style.fg,
         )
     else:
-        # Fall back to humidity when neither feels-like nor wind is available
         draw.text(
-            (right_x, y0 + L.WEATHER_DETAIL3_Y_OFFSET),
-            f"{weather.humidity}% humidity", font=detail3_font, fill=BLACK,
+            (right_x, y0 + detail3_y_offset),
+            f"{weather.humidity}% humidity", font=detail3_font, fill=style.fg,
         )
 
-    # Row 4: sunrise / sunset (Feature 3)
+    # Row 4: sunrise / sunset
     if weather.sunrise is not None or weather.sunset is not None:
         sun_parts: list[str] = []
         if weather.sunrise is not None:
@@ -112,25 +133,21 @@ def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: 
         if weather.sunset is not None:
             sun_parts.append(f"↓{_fmt_time(weather.sunset)}")
         draw.text(
-            (right_x, y0 + L.WEATHER_DETAIL4_Y_OFFSET),
-            "  ".join(sun_parts), font=detail3_font, fill=BLACK,
+            (right_x, y0 + detail4_y_offset),
+            "  ".join(sun_parts), font=detail3_font, fill=style.fg,
         )
 
     # Forecast strip along the bottom.
-    # Feature 4: when 2+ alerts are active, show both as stacked compact bars in
-    # the first two columns; otherwise a single alert takes the first column.
-    forecast_top = y0 + h - L.WEATHER_FORECAST_H
+    forecast_top = y0 + h - forecast_h
     hline(draw, forecast_top, x0, x0 + w)
 
     forecast_items = weather.forecast or []
     n_alerts = len(weather.alerts)
 
     if n_alerts >= 2:
-        # Two alert columns + up to 1 forecast column
         n_forecast_cols = min(len(forecast_items), 1)
         n_cols = 2 + n_forecast_cols
     elif n_alerts == 1:
-        # One alert column + up to 2 forecast columns
         n_forecast_cols = min(len(forecast_items), 2)
         n_cols = 1 + n_forecast_cols
     else:
@@ -140,8 +157,8 @@ def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: 
         return
 
     col_w = w // n_cols
-    day_font = semibold(11)
-    hilo_sm_font = regular(11)
+    day_font = style.font_semibold(11)
+    hilo_sm_font = style.font_regular(11)
     icon_size = 18
     forecast_idx = 0
 
@@ -149,36 +166,35 @@ def draw_weather(draw: ImageDraw.ImageDraw, weather: WeatherData | None, today: 
         cx = x0 + i * col_w
 
         if n_alerts >= 2 and i < 2:
-            # Two alert columns
             _draw_alert_column(
-                draw, weather.alerts[i].event, cx, forecast_top, col_w, L.WEATHER_FORECAST_H,
+                draw, weather.alerts[i].event, cx, forecast_top, col_w, forecast_h, style,
             )
         elif n_alerts == 1 and i == 0:
-            # Single alert column
             _draw_alert_column(
-                draw, weather.alerts[0].event, cx, forecast_top, col_w, L.WEATHER_FORECAST_H,
+                draw, weather.alerts[0].event, cx, forecast_top, col_w, forecast_h, style,
             )
         else:
             if forecast_idx < len(forecast_items):
                 fc = forecast_items[forecast_idx]
                 forecast_idx += 1
                 fx = cx + pad
-                draw_weather_icon(draw, (fx, forecast_top + 2), fc.icon, size=icon_size, fill=BLACK)
+                draw_weather_icon(
+                    draw, (fx, forecast_top + 2), fc.icon, size=icon_size, fill=style.fg,
+                )
                 text_x = fx + icon_size + 8
                 draw.text(
                     (text_x, forecast_top + 2),
-                    fc.date.strftime("%a"), font=day_font, fill=BLACK,
+                    fc.date.strftime("%a"), font=day_font, fill=style.fg,
                 )
                 draw.text(
                     (text_x, forecast_top + 14),
-                    f"{fc.high:.0f}°/{fc.low:.0f}°", font=hilo_sm_font, fill=BLACK,
+                    f"{fc.high:.0f}°/{fc.low:.0f}°", font=hilo_sm_font, fill=style.fg,
                 )
-                # Feature 2: precipitation probability (only when ≥ 5%)
                 if fc.precip_chance is not None and fc.precip_chance >= 0.05:
-                    precip_font = regular(10)
+                    precip_font = style.font_regular(10)
                     draw.text(
                         (text_x, forecast_top + 25),
-                        f"{fc.precip_chance:.0%}", font=precip_font, fill=BLACK,
+                        f"{fc.precip_chance:.0%}", font=precip_font, fill=style.fg,
                     )
 
         # Column separators
@@ -199,11 +215,12 @@ def _draw_alert_column(
     top: int,
     col_w: int,
     col_h: int,
+    style: ThemeStyle,
 ) -> None:
     """Draw an inverted alert bar filling one forecast column."""
-    filled_rect(draw, (cx, top, cx + col_w - 1, top + col_h - 1), fill=BLACK)
+    filled_rect(draw, (cx, top, cx + col_w - 1, top + col_h - 1), fill=style.fg)
 
-    alert_font = semibold(10)
+    alert_font = style.font_semibold(10)
     label = f"! {alert_event}"
     max_w = col_w - L.PAD * 2
 
@@ -238,5 +255,5 @@ def _draw_alert_column(
     for line in lines:
         lw = text_width(draw, line, alert_font)
         tx = cx + (col_w - lw) // 2
-        draw.text((tx, ty), line, font=alert_font, fill=WHITE)
+        draw.text((tx, ty), line, font=alert_font, fill=style.bg)
         ty += lh + 2
