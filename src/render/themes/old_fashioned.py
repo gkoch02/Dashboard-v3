@@ -15,16 +15,30 @@ from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
 
 
 def old_fashioned_theme() -> Theme:
+    cal_w = 530                           # ~66% of 800 — wider than before for readability
+    right_x = cal_w
+    right_w = 800 - cal_w                 # 270px right column
+    header_h = 50                         # tall decorative header
+    body_h = 480 - header_h               # 430px
+    # Stack three panels in the right column with proportional heights
+    weather_h = 150
+    birthday_h = 140
+    info_h = body_h - weather_h - birthday_h  # 140px
+
     return Theme(
         name="old_fashioned",
         layout=ThemeLayout(
             canvas_w=800,
             canvas_h=480,
-            header=ComponentRegion(0, 0, 800, 56),           # tall decorative header
-            week_view=ComponentRegion(0, 56, 500, 424),       # left 62%: full-height calendar
-            weather=ComponentRegion(500, 56, 300, 142),       # right column: weather
-            birthdays=ComponentRegion(500, 198, 300, 142),    # right column: birthdays
-            info=ComponentRegion(500, 340, 300, 140),         # right column: quote
+            header=ComponentRegion(0, 0, 800, header_h),
+            week_view=ComponentRegion(0, header_h, cal_w, body_h),
+            weather=ComponentRegion(right_x, header_h, right_w, weather_h),
+            birthdays=ComponentRegion(
+                right_x, header_h + weather_h, right_w, birthday_h,
+            ),
+            info=ComponentRegion(
+                right_x, header_h + weather_h + birthday_h, right_w, info_h,
+            ),
         ),
         style=ThemeStyle(
             fg=0,
@@ -32,10 +46,8 @@ def old_fashioned_theme() -> Theme:
             invert_header=True,
             invert_today_col=True,
             invert_allday_bars=True,
-            spacing_scale=1.1,          # slightly airier than default
+            spacing_scale=1.0,
             label_font_size=12,
             label_font_weight="bold",
-            # font_regular=lora_regular,  # uncomment when serif font is available
-            # font_bold=lora_bold,
         ),
     )

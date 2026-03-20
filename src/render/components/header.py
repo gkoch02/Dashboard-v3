@@ -4,7 +4,7 @@ from PIL import ImageDraw
 from src.data.models import StalenessLevel
 from src.render import layout as L
 from src.render.fonts import semibold, regular, bold
-from src.render.primitives import filled_rect, BLACK, WHITE, text_height, text_width
+from src.render.primitives import filled_rect, hline, BLACK, WHITE, text_height, text_width
 from src.render.theme import ComponentRegion, ThemeStyle
 
 
@@ -35,6 +35,8 @@ def draw_header(
         text_fill = style.bg
     else:
         text_fill = style.fg
+        # Draw a bottom border line for visual separation when there's no filled bar
+        hline(draw, y + h - 1, x, x + w - 1, fill=style.fg)
 
     # Title (left)
     title_font = style.font_bold(20)

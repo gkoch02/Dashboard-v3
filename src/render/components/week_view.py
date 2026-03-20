@@ -200,6 +200,20 @@ def draw_week(
             draw.text((cx + PAD, ty_abbr), day_abbr, font=fnt, fill=style.bg)
             abbr_w = text_width(draw, day_abbr + " ", fnt)
             draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=style.bg)
+        elif is_today and not style.invert_today_col:
+            # Non-inverted today: bold text + thick underline accent
+            fnt = style.font_bold(16)
+            num_bb = draw.textbbox((0, 0), day_num, font=fnt)
+            abbr_bb = draw.textbbox((0, 0), day_abbr, font=fnt)
+            num_ink_h = num_bb[3] - num_bb[1]
+            ty_num = y0 + (header_h - num_ink_h) // 2 - num_bb[1]
+            ty_abbr = ty_num + num_bb[3] - abbr_bb[3]
+            draw.text((cx + PAD, ty_abbr), day_abbr, font=fnt, fill=style.fg)
+            abbr_w = text_width(draw, day_abbr + " ", fnt)
+            draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=style.fg)
+            # Thick 2px underline beneath the day label
+            hline(draw, y0 + header_h - 3, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
+            hline(draw, y0 + header_h - 2, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
         elif is_weekend:
             # Weekend: lighter styling — regular weight instead of semibold
             wknd_abbr_font = style.font_regular(11)
@@ -244,14 +258,14 @@ def draw_week(
                         style=style)
 
         # Header underline
-        hline(draw, y0 + header_h - 1, cx, cx + col_w - 1)
+        hline(draw, y0 + header_h - 1, cx, cx + col_w - 1, fill=style.fg)
 
         # Column separator (right edge)
         FRI_COL = SAT_COL - 1
         if col < _COL_COUNT - 1:
             sep_bottom = (date_y - 1) if col in (FRI_COL, SAT_COL) else (y0 + total_h - 1)
-            vline(draw, cx + col_w - 1, y0, y0 + header_h - 1)
-            dashed_vline(draw, cx + col_w - 1, body_top, sep_bottom)
+            vline(draw, cx + col_w - 1, y0, y0 + header_h - 1, fill=style.fg)
+            dashed_vline(draw, cx + col_w - 1, body_top, sep_bottom, fill=style.fg)
 
         # Events — weekend columns give up their bottom 50% to the shared date cell
         events_body_h = (body_h - date_section_h) if is_weekend else body_h
@@ -282,7 +296,7 @@ def draw_week(
             )
 
     # Solid left border for the combined date cell (Saturday's left edge)
-    vline(draw, sat_cx, date_y, y0 + total_h - 1)
+    vline(draw, sat_cx, date_y, y0 + total_h - 1, fill=style.fg)
 
     # Combined "Today" cell — inverted month header, normal day number
     month_font = style.font_bold(33)

@@ -8,25 +8,30 @@ from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
 
 
 def minimalist_theme() -> Theme:
+    header_h = 28                         # slim header for a clean look
+    bottom_h = 112                        # slightly taller bottom panels
+    week_h = 480 - header_h - bottom_h    # 340px calendar
+    bottom_y = header_h + week_h          # 368
+
     return Theme(
         name="minimalist",
         layout=ThemeLayout(
             canvas_w=800,
             canvas_h=480,
-            header=ComponentRegion(0, 0, 800, 30),
-            week_view=ComponentRegion(0, 30, 800, 340),
-            weather=ComponentRegion(0, 370, 266, 110),
-            birthdays=ComponentRegion(266, 370, 267, 110),
-            info=ComponentRegion(533, 370, 267, 110),
+            header=ComponentRegion(0, 0, 800, header_h),
+            week_view=ComponentRegion(0, header_h, 800, week_h),
+            weather=ComponentRegion(0, bottom_y, 280, bottom_h),
+            birthdays=ComponentRegion(280, bottom_y, 260, bottom_h),
+            info=ComponentRegion(540, bottom_y, 260, bottom_h),
         ),
         style=ThemeStyle(
             fg=0,
             bg=1,
             invert_header=False,        # plain text header, no filled bar
-            invert_today_col=True,
+            invert_today_col=False,     # clean: no inverted today column
             invert_allday_bars=False,   # outlined bars instead of solid filled
-            spacing_scale=1.4,          # more breathing room between events
-            label_font_size=11,
+            spacing_scale=1.3,          # generous but not excessive
+            label_font_size=10,
             label_font_weight="regular",
         ),
     )

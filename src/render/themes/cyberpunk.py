@@ -14,11 +14,11 @@ def cyberpunk_theme() -> Theme:
         style=ThemeStyle(
             fg=1,                    # white text / lines on black canvas
             bg=0,                    # black background
-            invert_header=False,     # canvas is already black; no filled bar needed
+            invert_header=False,     # canvas is already dark; bottom border line only
             invert_today_col=True,   # today column: white fill + black text (pops)
             invert_allday_bars=True, # all-day bars: white fill + black text
-            spacing_scale=0.85,      # tighter than default — denser, more information
+            spacing_scale=0.9,       # slightly tighter for a denser, information-rich feel
             label_font_size=11,
-            label_font_weight="semibold",
+            label_font_weight="bold",
         ),
     )
