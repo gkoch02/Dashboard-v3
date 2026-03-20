@@ -3,8 +3,12 @@
 A bold masthead header with today's schedule in a spacious list on the left
 (via today_view) and weather, birthdays, and a daily quote stacked in a
 right-hand sidebar column — like a broadsheet newspaper's front page.
+Uses Playfair Display for a classic serif newspaper/broadsheet personality.
 """
 from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
+from src.render.fonts import (
+    playfair_regular, playfair_medium, playfair_semibold, playfair_bold,
+)
 
 
 def old_fashioned_theme() -> Theme:
@@ -49,5 +53,10 @@ def old_fashioned_theme() -> Theme:
             spacing_scale=1.1,           # slightly airy
             label_font_size=13,
             label_font_weight="bold",
+            # Playfair Display: classic newspaper serif for broadsheet personality.
+            font_regular=playfair_regular,
+            font_medium=playfair_medium,
+            font_semibold=playfair_semibold,
+            font_bold=playfair_bold,
         ),
     )
