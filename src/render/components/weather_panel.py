@@ -5,7 +5,9 @@ from PIL import ImageDraw
 from src.data.models import WeatherData
 from src.render import layout as L
 from src.render.fonts import bold, regular, medium, semibold, weather_icon as weather_icon_font
-from src.render.primitives import BLACK, WHITE, filled_rect, hline, text_width, vline
+from src.render.primitives import (
+    BLACK, WHITE, draw_text_truncated, filled_rect, hline, text_width, vline,
+)
 from src.render.icons import draw_weather_icon
 from src.render.moon import moon_phase_glyph
 from src.fetchers.weather import deg_to_compass
@@ -87,12 +89,13 @@ def draw_weather(
 
     # Right-column detail rows
     right_x = x0 + detail_x_offset
+    max_detail_w = w - detail_x_offset - pad
 
     # Row 1: description
     desc_font = style.font_medium(13)
-    draw.text(
-        (right_x, y0 + content_y_offset),
-        weather.current_description.title(), font=desc_font, fill=style.fg,
+    draw_text_truncated(
+        draw, (right_x, y0 + content_y_offset),
+        weather.current_description.title(), desc_font, max_detail_w, fill=style.fg,
     )
 
     # Row 2: hi/lo + UV index when available
@@ -100,10 +103,12 @@ def draw_weather(
     hilo_str = f"H:{weather.high:.0f}°  L:{weather.low:.0f}°"
     if weather.uv_index is not None:
         uv_suffix = f"  UV:{weather.uv_index:.0f}"
-        max_detail_w = w - detail_x_offset - pad
         if text_width(draw, hilo_str + uv_suffix, hilo_font) <= max_detail_w:
             hilo_str += uv_suffix
-    draw.text((right_x, y0 + hilo_y_offset), hilo_str, font=hilo_font, fill=style.fg)
+    draw_text_truncated(
+        draw, (right_x, y0 + hilo_y_offset), hilo_str, hilo_font, max_detail_w,
+        fill=style.fg,
+    )
 
     # Row 3: feels-like + wind speed
     detail3_font = style.font_regular(11)
@@ -115,16 +120,11 @@ def draw_weather(
         if weather.wind_deg is not None:
             wind_str += f" {deg_to_compass(weather.wind_deg)}"
         detail3_parts.append(wind_str)
-    if detail3_parts:
-        draw.text(
-            (right_x, y0 + detail3_y_offset),
-            "  ·  ".join(detail3_parts), font=detail3_font, fill=style.fg,
-        )
-    else:
-        draw.text(
-            (right_x, y0 + detail3_y_offset),
-            f"{weather.humidity}% humidity", font=detail3_font, fill=style.fg,
-        )
+    detail3_text = "  ·  ".join(detail3_parts) if detail3_parts else f"{weather.humidity}% humidity"
+    draw_text_truncated(
+        draw, (right_x, y0 + detail3_y_offset),
+        detail3_text, detail3_font, max_detail_w, fill=style.fg,
+    )
 
     # Row 4: sunrise / sunset
     if weather.sunrise is not None or weather.sunset is not None:
@@ -133,9 +133,9 @@ def draw_weather(
             sun_parts.append(f"↑{_fmt_time(weather.sunrise)}")
         if weather.sunset is not None:
             sun_parts.append(f"↓{_fmt_time(weather.sunset)}")
-        draw.text(
-            (right_x, y0 + detail4_y_offset),
-            "  ".join(sun_parts), font=detail3_font, fill=style.fg,
+        draw_text_truncated(
+            draw, (right_x, y0 + detail4_y_offset),
+            "  ".join(sun_parts), detail3_font, max_detail_w, fill=style.fg,
         )
 
     # Forecast strip along the bottom.

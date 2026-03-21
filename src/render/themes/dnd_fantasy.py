@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from src.render.fonts import cinzel_bold, cinzel_semibold, regular, medium
+from src.render.fonts import cinzel_bold, cinzel_semibold, regular, medium, semibold
 from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ _CANVAS_W = 800
 _CANVAS_H = 480
 
 _HEADER_H = 50          # tall masthead for the fantasy title
-_SIDEBAR_W = 215        # arcane tower on the left
+_SIDEBAR_W = 240        # arcane tower on the left
 
 _BODY_Y = _HEADER_H
 _BODY_H = _CANVAS_H - _HEADER_H   # 430px
@@ -244,14 +244,16 @@ def dnd_fantasy_theme() -> Theme:
         invert_header=True,             # filled black header bar (already black = canvas bg)
         invert_today_col=True,          # white-filled today column with black text
         invert_allday_bars=True,        # solid white bars for all-day events
-        spacing_scale=0.9,              # slightly compact — more quests visible
+        spacing_scale=1.0,
         label_font_size=10,
         label_font_weight="bold",
-        # Cinzel for labels/headers; Plus Jakarta Sans for body (readable at small sizes)
+        # Cinzel Bold for large display text (day numbers, MARCH label, section headers).
+        # Cinzel SemiBold for section label text (THE ORACLE'S OMEN etc.).
+        # Plus Jakarta Sans for all event/body text — legible at small sizes in narrow columns.
         font_regular=regular,
         font_medium=medium,
-        font_semibold=cinzel_semibold,  # event titles in Cinzel semibold
-        font_bold=cinzel_bold,          # headers and day numbers in Cinzel bold
+        font_semibold=semibold,         # event titles stay in Plus Jakarta Sans
+        font_bold=cinzel_bold,          # day numbers, MARCH, header title in Cinzel
         component_labels={
             "weather": "THE ORACLE'S OMEN",
             "birthdays": "THE FELLOWSHIP",
