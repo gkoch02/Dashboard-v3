@@ -6,7 +6,6 @@ from src.render import layout as L
 from src.render.fonts import (
     semibold, regular, bold, medium,
 )
-from src.render.icons import draw_weather_icon
 from src.render.primitives import (
     BLACK, WHITE, hline, vline, dashed_vline, filled_rect,
     draw_text_truncated, draw_text_wrapped, text_height, text_width,
@@ -92,9 +91,6 @@ def draw_week(
 ):
     """Draw the 7-day calendar grid starting from the Monday of the current week.
 
-    When *forecast* is provided, small weather icons are drawn in column headers
-    for days that have forecast data, giving a unified week-at-a-glance view.
-
     *max_busy_dots* controls the cap on busy-ness dots per column header.
     """
     if region is None:
@@ -121,12 +117,6 @@ def draw_week(
 
     # Find Monday of this week (weekday() == 0 for Monday)
     week_start = today - timedelta(days=today.weekday())
-
-    # Index forecast by date for O(1) lookup per column
-    forecast_by_date: dict[date, DayForecast] = {}
-    if forecast:
-        for fc in forecast:
-            forecast_by_date[fc.date] = fc
 
     day_label_font = style.font_semibold(11)
     day_num_font = style.font_bold(16)
@@ -236,22 +226,6 @@ def draw_week(
             draw.text((cx + PAD, ty_abbr), day_abbr, font=day_label_font, fill=style.fg)
             abbr_w = text_width(draw, day_abbr + " ", day_label_font)
             draw.text((cx + PAD + abbr_w, ty_num), day_num, font=day_num_font, fill=style.fg)
-
-        # Small forecast icon in column header
-        fc = forecast_by_date.get(day)
-        if fc:
-            _FORECAST_ICON_SIZE = 12
-            icon_x = (
-                cx + col_w - PAD
-                - (max_busy_dots * (_DOT_SIZE + _DOT_GAP))
-                - _FORECAST_ICON_SIZE - 4
-            )
-            icon_y = y0 + (header_h - _FORECAST_ICON_SIZE) // 2
-            icon_fill = style.bg if (is_today and style.invert_today_col) else style.fg
-            draw_weather_icon(
-                draw, (icon_x, icon_y), fc.icon,
-                size=_FORECAST_ICON_SIZE, fill=icon_fill,
-            )
 
         # Busy-ness dots
         _draw_busy_dots(draw, len(day_events), cx, y0, col_w, header_h, is_today, max_busy_dots,
