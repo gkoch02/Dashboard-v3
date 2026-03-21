@@ -67,6 +67,20 @@ def draw_text_wrapped(
         else:
             if current_line:
                 lines.append(current_line)
+            # If the word itself is too wide, truncate it so it never overflows
+            word_bbox = draw.textbbox((0, 0), word, font=font)
+            if word_bbox[2] - word_bbox[0] > max_width:
+                lo, hi, best_i = 1, len(word), 0
+                while lo <= hi:
+                    mid = (lo + hi) // 2
+                    candidate = word[:mid] + "..."
+                    cb = draw.textbbox((0, 0), candidate, font=font)
+                    if cb[2] - cb[0] <= max_width:
+                        best_i = mid
+                        lo = mid + 1
+                    else:
+                        hi = mid - 1
+                word = word[:best_i] + "..." if best_i > 0 else "..."
             current_line = word
 
     if current_line:
