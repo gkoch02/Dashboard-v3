@@ -79,37 +79,6 @@ def _corner_ornament(
     _diamond(draw, cx, cy, 3, 1 - fill)   # inner diamond in opposite color
 
 
-def _sword_glyph(
-    draw: "ImageDraw.ImageDraw", tip_x: int, mid_y: int, length: int, fill: int,
-) -> None:
-    """Draw a simple sword pointing right, centred vertically at *mid_y*.
-
-    The sword blade runs from *tip_x* leftward *length* pixels.  This gives a
-    symmetric pair when mirrored for the header: ⚔ style without needing a glyph.
-    """
-    blade_end_x = tip_x - length
-    guard_x = blade_end_x + length // 3
-
-    # Blade (horizontal line, 2px thick)
-    draw.line([(tip_x, mid_y), (blade_end_x, mid_y)], fill=fill, width=2)
-
-    # Point: small triangle at tip
-    draw.polygon([
-        (tip_x, mid_y),
-        (tip_x - 4, mid_y - 2),
-        (tip_x - 4, mid_y + 2),
-    ], fill=fill)
-
-    # Crossguard (vertical, through guard_x)
-    draw.line([(guard_x, mid_y - 8), (guard_x, mid_y + 8)], fill=fill, width=2)
-
-    # Grip (thicker segment from guard to pommel)
-    grip_end_x = blade_end_x
-    draw.line([(guard_x, mid_y), (grip_end_x, mid_y)], fill=fill, width=3)
-
-    # Pommel (small diamond)
-    _diamond(draw, grip_end_x, mid_y, 4, fill)
-
 
 def _draw_fantasy_overlay(
     draw: "ImageDraw.ImageDraw",
@@ -152,28 +121,13 @@ def _draw_fantasy_overlay(
     _diamond(draw, mid_x, hdr_bottom, 5, fg)
 
     # ------------------------------------------------------------------
-    # 4. Swords in the header flanking the title
+    # 4. Decorative diamond ticks centred on the top header border
     # ------------------------------------------------------------------
-    mid_y = _HEADER_H // 2
-    # Left sword (pointing right, tip toward centre)
-    sword_len = 28
-    left_tip_x = 35
-    _sword_glyph(draw, left_tip_x + sword_len, mid_y, sword_len, fg)
-
-    # Right sword (mirror: pointing left, tip toward centre)
-    right_tip_x = W - 35 - sword_len
-    # Draw the mirrored sword: blade goes from right_tip_x to the right
-    blade_start = right_tip_x
-    guard_x_r = blade_start + sword_len // 3 * 2
-    draw.line([(blade_start, mid_y), (blade_start + sword_len, mid_y)], fill=fg, width=2)
-    draw.polygon([
-        (blade_start, mid_y),
-        (blade_start + 4, mid_y - 2),
-        (blade_start + 4, mid_y + 2),
-    ], fill=fg)
-    draw.line([(guard_x_r, mid_y - 8), (guard_x_r, mid_y + 8)], fill=fg, width=2)
-    draw.line([(guard_x_r, mid_y), (blade_start + sword_len, mid_y)], fill=fg, width=3)
-    _diamond(draw, blade_start + sword_len, mid_y, 4, fg)
+    # Small diamonds at the 1/4 and 3/4 horizontal positions of the header
+    # bottom rule — purely ornamental, placed away from title and timestamp.
+    hdr_mid_y = _HEADER_H // 2
+    for tick_x in (W // 4, W * 3 // 4):
+        _diamond(draw, tick_x, hdr_mid_y, 3, fg)
 
     # ------------------------------------------------------------------
     # 5. Vertical divider between sidebar and quest log
