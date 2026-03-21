@@ -146,7 +146,7 @@ class Theme:
 # ---------------------------------------------------------------------------
 
 AVAILABLE_THEMES: frozenset[str] = frozenset(
-    {"default", "cyberpunk", "minimalist", "old_fashioned", "today", "dnd_fantasy"}
+    {"default", "terminal", "minimalist", "old_fashioned", "today", "fantasy"}
 )
 
 
@@ -184,9 +184,9 @@ def load_theme(name: str) -> Theme:
     """
     if name == "default":
         return default_theme()
-    if name == "cyberpunk":
-        from src.render.themes.cyberpunk import cyberpunk_theme
-        return cyberpunk_theme()
+    if name == "terminal":
+        from src.render.themes.terminal import terminal_theme
+        return terminal_theme()
     if name == "minimalist":
         from src.render.themes.minimalist import minimalist_theme
         return minimalist_theme()
@@ -196,9 +196,9 @@ def load_theme(name: str) -> Theme:
     if name == "today":
         from src.render.themes.today import today_theme
         return today_theme()
-    if name == "dnd_fantasy":
-        from src.render.themes.dnd_fantasy import dnd_fantasy_theme
-        return dnd_fantasy_theme()
+    if name == "fantasy":
+        from src.render.themes.fantasy import fantasy_theme
+        return fantasy_theme()
     raise ValueError(
         f"Unknown theme: {name!r}. Available: {', '.join(sorted(AVAILABLE_THEMES))}"
     )

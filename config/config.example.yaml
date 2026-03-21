@@ -72,5 +72,5 @@ logging:
 # title: "Home Dashboard"
 
 # UI theme — controls overall layout, proportions, and visual style.
-# Options: default, minimalist, cyberpunk, old_fashioned
+# Options: default, minimalist, terminal, old_fashioned, today, fantasy
 # theme: default

@@ -198,10 +198,10 @@ class TestLoadTheme:
         assert isinstance(t, Theme)
         assert t.name == "default"
 
-    def test_loads_cyberpunk(self):
-        t = load_theme("cyberpunk")
+    def test_loads_terminal(self):
+        t = load_theme("terminal")
         assert isinstance(t, Theme)
-        assert t.name == "cyberpunk"
+        assert t.name == "terminal"
 
     def test_loads_minimalist(self):
         t = load_theme("minimalist")
@@ -222,18 +222,18 @@ class TestLoadTheme:
         assert isinstance(t, Theme)
         assert t.name == "today"
 
-    def test_loads_dnd_fantasy(self):
-        t = load_theme("dnd_fantasy")
+    def test_loads_fantasy(self):
+        t = load_theme("fantasy")
         assert isinstance(t, Theme)
-        assert t.name == "dnd_fantasy"
+        assert t.name == "fantasy"
 
     def test_available_themes_contains_expected(self):
         assert "default" in AVAILABLE_THEMES
-        assert "cyberpunk" in AVAILABLE_THEMES
+        assert "terminal" in AVAILABLE_THEMES
         assert "minimalist" in AVAILABLE_THEMES
         assert "old_fashioned" in AVAILABLE_THEMES
         assert "today" in AVAILABLE_THEMES
-        assert "dnd_fantasy" in AVAILABLE_THEMES
+        assert "fantasy" in AVAILABLE_THEMES
 
 
 # ---------------------------------------------------------------------------
@@ -257,21 +257,21 @@ class TestRenderDashboardWithThemes:
         assert isinstance(result, Image.Image)
         assert result.size == (800, 480)
 
-    def test_cyberpunk_theme_produces_valid_image(self):
+    def test_terminal_theme_produces_valid_image(self):
         data = _make_data()
-        t = load_theme("cyberpunk")
+        t = load_theme("terminal")
         result = render_dashboard(data, self._cfg(), theme=t)
         assert isinstance(result, Image.Image)
         assert result.mode == "1"
         assert result.size == (800, 480)
 
-    def test_cyberpunk_canvas_starts_black(self):
-        """Cyberpunk bg=0 means the canvas background pixel is BLACK (0)."""
+    def test_terminal_canvas_starts_black(self):
+        """Terminal bg=0 means the canvas background pixel is BLACK (0)."""
         data = _make_data()
         data.events = []  # minimal content so background is visible
-        t = load_theme("cyberpunk")
+        t = load_theme("terminal")
         result = render_dashboard(data, self._cfg(), theme=t)
-        # Top-left corner should be black (0) for cyberpunk (bg=0)
+        # Top-left corner should be black (0) for terminal (bg=0)
         assert result.getpixel((0, 0)) == 0
 
     def test_default_canvas_starts_white(self):
@@ -301,38 +301,38 @@ class TestRenderDashboardWithThemes:
         assert result.mode == "1"
         assert result.size == (800, 480)
 
-    def test_dnd_fantasy_theme_produces_valid_image(self):
+    def test_fantasy_theme_produces_valid_image(self):
         data = _make_data()
-        t = load_theme("dnd_fantasy")
+        t = load_theme("fantasy")
         result = render_dashboard(data, self._cfg(), theme=t)
         assert isinstance(result, Image.Image)
         assert result.mode == "1"
         assert result.size == (800, 480)
 
-    def test_dnd_fantasy_canvas_starts_black(self):
-        """D&D fantasy theme uses a black background."""
-        t = load_theme("dnd_fantasy")
+    def test_fantasy_canvas_starts_black(self):
+        """Fantasy theme uses a black background."""
+        t = load_theme("fantasy")
         assert t.style.bg == 0   # BLACK
         assert t.style.fg == 1   # WHITE
 
-    def test_dnd_fantasy_has_overlay_fn(self):
-        """D&D fantasy theme wires up the decorative border overlay."""
-        t = load_theme("dnd_fantasy")
+    def test_fantasy_has_overlay_fn(self):
+        """Fantasy theme wires up the decorative border overlay."""
+        t = load_theme("fantasy")
         assert t.layout.overlay_fn is not None
         assert callable(t.layout.overlay_fn)
 
-    def test_dnd_fantasy_sidebar_layout(self):
+    def test_fantasy_sidebar_layout(self):
         """Sidebar panels live on the left; week view on the right."""
-        t = load_theme("dnd_fantasy")
+        t = load_theme("fantasy")
         assert t.layout.week_view.x > 0          # quest log is not at x=0
         assert t.layout.weather.x == 0           # weather is in the sidebar
         assert t.layout.birthdays.x == 0         # birthdays is in the sidebar
         assert t.layout.info.x == 0              # quote is in the sidebar
         assert t.layout.week_view.w > t.layout.weather.w  # calendar wider than sidebar
 
-    def test_dnd_fantasy_component_labels(self):
+    def test_fantasy_component_labels(self):
         """Fantasy-themed section labels are configured."""
-        t = load_theme("dnd_fantasy")
+        t = load_theme("fantasy")
         labels = t.style.component_labels
         assert labels.get("weather") != "WEATHER"
         assert labels.get("birthdays") != "BIRTHDAYS"
@@ -430,9 +430,9 @@ class TestThemeConfigField:
         import yaml
         from src.config import load_config
         config_file = tmp_path / "config.yaml"
-        config_file.write_text(yaml.dump({"theme": "cyberpunk"}))
+        config_file.write_text(yaml.dump({"theme": "terminal"}))
         cfg = load_config(str(config_file))
-        assert cfg.theme == "cyberpunk"
+        assert cfg.theme == "terminal"
 
     def test_unknown_theme_produces_validation_warning(self):
         from src.config import Config, validate_config
@@ -445,7 +445,7 @@ class TestThemeConfigField:
     def test_known_theme_produces_no_theme_warning(self):
         from src.config import Config, validate_config
         cfg = Config()
-        cfg.theme = "cyberpunk"
+        cfg.theme = "terminal"
         errors, warnings = validate_config(cfg)
         warning_fields = [w.field for w in warnings]
         assert "theme" not in warning_fields
