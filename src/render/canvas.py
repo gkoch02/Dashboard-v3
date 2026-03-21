@@ -53,7 +53,6 @@ def render_dashboard(
         "week_view": lambda: week_view.draw_week(
             draw, data.events, today,
             forecast=week_forecast,
-            max_busy_dots=config.max_busy_dots,
             region=layout.week_view,
             style=style,
         ),

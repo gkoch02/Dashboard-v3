@@ -97,45 +97,10 @@ class TestEventLocationDisplay:
 
 
 # ---------------------------------------------------------------------------
-# Busy-ness heatmap dots (week_view)
+# Week view header rendering (busyness indicators removed)
 # ---------------------------------------------------------------------------
 
 class TestBusynessHeatmap:
-    def test_busy_day_darker_than_empty(self):
-        """A non-today column with events has more black pixels (dots) than one without."""
-        today = date(2024, 3, 18)  # Monday — col 0 (inverted, so dots are white there)
-        tuesday = today + timedelta(days=1)  # col 1 — normal header, dots are black
-        events = [_timed(tuesday, 9, 10, f"Evt {i}") for i in range(3)]
-
-        img_busy, draw_busy = _make_draw()
-        draw_week(draw_busy, events, today)
-
-        img_empty, draw_empty = _make_draw()
-        draw_week(draw_empty, [], today)
-
-        import src.render.layout as L
-        x0 = L.WEEK_X
-        y0 = L.WEEK_Y
-        col_w = L.WEEK_COL_W
-        header_h = L.WEEK_HEADER_H
-
-        # Tuesday is col 1 — regular (non-inverted) header with black dots
-        col_idx = 1
-        cx = x0 + col_idx * col_w
-
-        busy_pixels = sum(
-            1 for x in range(cx, cx + col_w)
-            for y in range(y0, y0 + header_h)
-            if img_busy.getpixel((x, y)) == 0
-        )
-        empty_pixels = sum(
-            1 for x in range(cx, cx + col_w)
-            for y in range(y0, y0 + header_h)
-            if img_empty.getpixel((x, y)) == 0
-        )
-        # Busy column has black dots added to the header → more black pixels
-        assert busy_pixels > empty_pixels
-
     def test_no_crash_with_max_events(self):
         """10+ events (> _MAX_DOTS cap) should not crash."""
         today = date(2024, 3, 18)

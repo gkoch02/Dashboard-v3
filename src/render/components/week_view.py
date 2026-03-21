@@ -17,11 +17,6 @@ PAD = L.PAD_SM + 1  # 5px inner padding for columns
 # Number of days in a week (not a layout detail — always 7)
 _COL_COUNT = 7
 
-# Default maximum number of busy-ness dots shown in a day header
-_DEFAULT_MAX_DOTS = 5
-_DOT_SIZE = 3
-_DOT_GAP = 2
-
 
 def _density_tier(event_count: int, is_weekend: bool) -> str:
     """Select density tier based on event count and column type.
@@ -84,15 +79,11 @@ def draw_week(
     events: list[CalendarEvent],
     today: date,
     forecast: list[DayForecast] | None = None,
-    max_busy_dots: int = _DEFAULT_MAX_DOTS,
     *,
     region: ComponentRegion | None = None,
     style: ThemeStyle | None = None,
 ):
-    """Draw the 7-day calendar grid starting from the Monday of the current week.
-
-    *max_busy_dots* controls the cap on busy-ness dots per column header.
-    """
+    """Draw the 7-day calendar grid starting from the Monday of the current week."""
     if region is None:
         region = ComponentRegion(L.WEEK_X, L.WEEK_Y, L.WEEK_W, L.WEEK_H)
     if style is None:
@@ -227,10 +218,6 @@ def draw_week(
             abbr_w = text_width(draw, day_abbr + " ", day_label_font)
             draw.text((cx + PAD + abbr_w, ty_num), day_num, font=day_num_font, fill=style.fg)
 
-        # Busy-ness dots
-        _draw_busy_dots(draw, len(day_events), cx, y0, col_w, header_h, is_today, max_busy_dots,
-                        style=style)
-
         # Header underline
         hline(draw, y0 + header_h - 1, cx, cx + col_w - 1, fill=style.fg)
 
@@ -301,34 +288,6 @@ def draw_week(
     dn_y = day_area_y + (day_area_h - dn_h) // 2 - dbb[1]
     draw.text((dn_x, dn_y), dn_text, font=date_section_font, fill=style.fg)
 
-
-def _draw_busy_dots(
-    draw: ImageDraw.ImageDraw,
-    event_count: int,
-    cx: int,
-    y0: int,
-    col_w: int,
-    header_h: int,
-    is_today: bool,
-    max_dots: int = _DEFAULT_MAX_DOTS,
-    *,
-    style: ThemeStyle | None = None,
-) -> None:
-    """Draw filled 3×3 squares right-aligned in the header to indicate how busy a day is."""
-    if event_count == 0:
-        return
-    if style is None:
-        style = ThemeStyle()
-
-    n_dots = min(event_count, max_dots)
-    total_w = n_dots * _DOT_SIZE + (n_dots - 1) * _DOT_GAP
-    dot_x = cx + col_w - PAD - total_w
-    dot_y = y0 + (header_h - _DOT_SIZE) // 2
-    dot_fill = style.bg if (is_today and style.invert_today_col) else style.fg
-
-    for i in range(n_dots):
-        dx = dot_x + i * (_DOT_SIZE + _DOT_GAP)
-        filled_rect(draw, (dx, dot_y, dx + _DOT_SIZE - 1, dot_y + _DOT_SIZE - 1), fill=dot_fill)
 
 
 def _wrap_line_count(draw: ImageDraw.ImageDraw, text: str, font, max_w: int) -> int:
