@@ -45,7 +45,6 @@ class DisplayConfig:
     show_weather: bool = True
     show_birthdays: bool = True
     show_info_panel: bool = True
-    max_busy_dots: int = 5  # maximum busy-ness dots shown per day column header
 
 
 @dataclass
@@ -156,7 +155,6 @@ def load_config(path: str = "config/config.yaml") -> Config:
             show_weather=d.get("show_weather", True),
             show_birthdays=d.get("show_birthdays", True),
             show_info_panel=d.get("show_info_panel", True),
-            max_busy_dots=d.get("max_busy_dots", 5),
         )
 
     if "schedule" in raw:

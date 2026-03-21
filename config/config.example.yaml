@@ -12,9 +12,6 @@ display:
   show_weather: true
   show_birthdays: true
   show_info_panel: true
-  # Maximum busy-ness dots shown per day in the week-view column header (1 dot per event).
-  # Increase for high-density calendars; decrease for a cleaner look.
-  max_busy_dots: 5
 
 google:
   service_account_path: "credentials/service_account.json"
