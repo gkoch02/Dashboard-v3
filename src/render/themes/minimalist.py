@@ -1,24 +1,46 @@
-"""Minimalist theme: editorial calm — the calendar owns the screen.
+"""Minimalist theme: Bauhaus — form follows function, the grid is the content.
 
-Ultra-slim 22px header (single pixel underline, no filled bar). Week view
-gets 362px — 42px more than the default. A compact 96px bottom strip holds
-only weather and the daily quote side-by-side; birthdays are hidden to keep
-the layout uncluttered. Today is marked with a subtle double underline, not
-a filled column. All-day event bars are outlined rather than filled.
+Ultra-slim 22px header (single-pixel rule, no fill). The week grid dominates
+at 374px — 54px more than the default. Today's column is marked with a full
+inverted black header block (not a soft double-underline) — the NOW is declared.
+All-day event bars are filled black. Events pack to a 1.0× grid.
 
-Uses DM Sans — a screen-optimised variable geometric sans with per-size
-optical tuning — for an editorial, precision feel that's distinct from the
-warmer Plus Jakarta Sans used in the default theme.
+An 84px bottom strip splits asymmetrically: weather at 500px (wider,
+proportioned ~5:3) and quote at 300px. Section labels are 8pt regular —
+functional, recessive. The quote label collapses to a single em dash.
+
+Overlay: a 2px left-margin vertical rule runs from below the header to the
+bottom edge; a 2px bottom horizontal rail closes the frame. Two rules — that
+is all the ornamentation this layout needs.
+
+Font: DM Sans — geometric, screen-optimized variable sans. Each weight is used
+at its optical sweet spot.
 """
 from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
 from src.render.fonts import dm_regular, dm_medium, dm_semibold, dm_bold
+from src.render.primitives import hline, vline
+
+
+def _bauhaus_overlay(draw, layout: ThemeLayout, style: ThemeStyle) -> None:
+    """Two structural rails: 2px left-margin rule + 2px bottom rule."""
+    h = layout.canvas_h
+    w = layout.canvas_w
+    y_start = layout.header.h  # begin below the header
+
+    # Left margin rail — anchors the grid like a Bauhaus column rule
+    vline(draw, 0, y_start, h - 1, fill=style.fg)
+    vline(draw, 1, y_start, h - 1, fill=style.fg)
+
+    # Bottom rail — closes the frame
+    hline(draw, h - 1, 0, w - 1, fill=style.fg)
+    hline(draw, h - 2, 0, w - 1, fill=style.fg)
 
 
 def minimalist_theme() -> Theme:
     header_h = 22
-    bottom_h = 96
-    week_h = 480 - header_h - bottom_h     # 362px
-    bottom_y = header_h + week_h            # 384
+    bottom_h = 84
+    week_h = 480 - header_h - bottom_h     # 374px
+    bottom_y = header_h + week_h            # 396
 
     return Theme(
         name="minimalist",
@@ -27,20 +49,22 @@ def minimalist_theme() -> Theme:
             canvas_h=480,
             header=ComponentRegion(0, 0, 800, header_h),
             week_view=ComponentRegion(0, header_h, 800, week_h),
-            weather=ComponentRegion(0, bottom_y, 420, bottom_h),
+            weather=ComponentRegion(0, bottom_y, 500, bottom_h),
             birthdays=ComponentRegion(0, 0, 0, 0, visible=False),
-            info=ComponentRegion(420, bottom_y, 380, bottom_h),
+            info=ComponentRegion(500, bottom_y, 300, bottom_h),
             draw_order=["header", "week_view", "weather", "info"],
+            overlay_fn=_bauhaus_overlay,
         ),
         style=ThemeStyle(
             fg=0,
             bg=1,
-            invert_header=False,          # single pixel underline only
-            invert_today_col=False,       # double underline accent, no filled block
-            invert_allday_bars=False,     # outlined bars — lighter visual weight
-            spacing_scale=1.4,
-            label_font_size=9,
+            invert_header=False,          # single-pixel rule, no filled bar
+            invert_today_col=True,        # bold black today — the NOW is declared
+            invert_allday_bars=True,      # solid black all-day bars, no outlines
+            spacing_scale=1.0,            # tight, grid-precise event packing
+            label_font_size=8,            # labels recede; data leads
             label_font_weight="regular",
+            component_labels={"info": "—"},   # strip verbose "QUOTE OF THE DAY"
             font_regular=dm_regular,
             font_medium=dm_medium,
             font_semibold=dm_semibold,
