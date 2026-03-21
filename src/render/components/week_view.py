@@ -357,6 +357,30 @@ def _draw_busy_dots(
         filled_rect(draw, (dx, dot_y, dx + _DOT_SIZE - 1, dot_y + _DOT_SIZE - 1), fill=dot_fill)
 
 
+def _autofit_font(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    font,
+    style: "ThemeStyle",
+    max_w: int,
+    min_size: int = 9,
+):
+    """Return the given font, or a smaller medium variant if any word overflows max_w."""
+    words = text.split()
+    current = font
+    size = current.size
+    while size > min_size:
+        if all(
+            draw.textbbox((0, 0), w, font=current)[2]
+            - draw.textbbox((0, 0), w, font=current)[0] <= max_w
+            for w in words
+        ):
+            return current
+        size -= 1
+        current = style.font_medium(size)
+    return current
+
+
 def _event_date_range(e: CalendarEvent) -> tuple[date, date]:
     """Return (start_date, end_date) for an event (end is exclusive)."""
     start_d = e.start.date() if isinstance(e.start, datetime) else e.start
@@ -476,8 +500,9 @@ def _draw_day_events(
                 draw, (cx + PAD, y), time_str, time_font, max_w, fill=style.fg,
             )
             y += time_h + 1
+            fitted_font = _autofit_font(draw, event.summary, title_font, style, max_w)
             used_h = draw_text_wrapped(
-                draw, (cx + PAD, y), event.summary, title_font,
+                draw, (cx + PAD, y), event.summary, fitted_font,
                 max_w, max_lines=max_title_lines, line_spacing=1, fill=style.fg,
             )
             y += max(used_h, title_h)
