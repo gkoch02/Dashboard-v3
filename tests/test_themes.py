@@ -222,12 +222,18 @@ class TestLoadTheme:
         assert isinstance(t, Theme)
         assert t.name == "today"
 
+    def test_loads_dnd_fantasy(self):
+        t = load_theme("dnd_fantasy")
+        assert isinstance(t, Theme)
+        assert t.name == "dnd_fantasy"
+
     def test_available_themes_contains_expected(self):
         assert "default" in AVAILABLE_THEMES
         assert "cyberpunk" in AVAILABLE_THEMES
         assert "minimalist" in AVAILABLE_THEMES
         assert "old_fashioned" in AVAILABLE_THEMES
         assert "today" in AVAILABLE_THEMES
+        assert "dnd_fantasy" in AVAILABLE_THEMES
 
 
 # ---------------------------------------------------------------------------
@@ -294,6 +300,43 @@ class TestRenderDashboardWithThemes:
         assert isinstance(result, Image.Image)
         assert result.mode == "1"
         assert result.size == (800, 480)
+
+    def test_dnd_fantasy_theme_produces_valid_image(self):
+        data = _make_data()
+        t = load_theme("dnd_fantasy")
+        result = render_dashboard(data, self._cfg(), theme=t)
+        assert isinstance(result, Image.Image)
+        assert result.mode == "1"
+        assert result.size == (800, 480)
+
+    def test_dnd_fantasy_canvas_starts_black(self):
+        """D&D fantasy theme uses a black background."""
+        t = load_theme("dnd_fantasy")
+        assert t.style.bg == 0   # BLACK
+        assert t.style.fg == 1   # WHITE
+
+    def test_dnd_fantasy_has_overlay_fn(self):
+        """D&D fantasy theme wires up the decorative border overlay."""
+        t = load_theme("dnd_fantasy")
+        assert t.layout.overlay_fn is not None
+        assert callable(t.layout.overlay_fn)
+
+    def test_dnd_fantasy_sidebar_layout(self):
+        """Sidebar panels live on the left; week view on the right."""
+        t = load_theme("dnd_fantasy")
+        assert t.layout.week_view.x > 0          # quest log is not at x=0
+        assert t.layout.weather.x == 0           # weather is in the sidebar
+        assert t.layout.birthdays.x == 0         # birthdays is in the sidebar
+        assert t.layout.info.x == 0              # quote is in the sidebar
+        assert t.layout.week_view.w > t.layout.weather.w  # calendar wider than sidebar
+
+    def test_dnd_fantasy_component_labels(self):
+        """Fantasy-themed section labels are configured."""
+        t = load_theme("dnd_fantasy")
+        labels = t.style.component_labels
+        assert labels.get("weather") != "WEATHER"
+        assert labels.get("birthdays") != "BIRTHDAYS"
+        assert labels.get("info") != "QUOTE OF THE DAY"
 
     def test_today_theme_produces_valid_image(self):
         data = _make_data()

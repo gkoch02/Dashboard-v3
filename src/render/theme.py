@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from typing import Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PIL import ImageFont
+    from PIL import ImageDraw, ImageFont
 
 FontCallable = Callable[[int], "ImageFont.FreeTypeFont"]
 
@@ -65,6 +65,12 @@ class ThemeLayout:
     draw_order: list[str] = field(
         default_factory=lambda: ["header", "week_view", "weather", "birthdays", "info"]
     )
+    # Optional overlay function called after all components are drawn.
+    # Signature: (draw, layout, style) -> None.  Use for theme-specific decorations
+    # such as ornamental borders that must render on top of all components.
+    overlay_fn: "Callable[[ImageDraw.ImageDraw, ThemeLayout, ThemeStyle], None] | None" = field(
+        default=None, repr=False
+    )
 
 
 @dataclass
@@ -96,6 +102,10 @@ class ThemeStyle:
     # Section label style ("WEATHER", "BIRTHDAYS", "QUOTE OF THE DAY")
     label_font_size: int = 12
     label_font_weight: str = "bold"  # "bold" | "semibold" | "regular"
+
+    # Optional overrides for component section labels.
+    # Keys: "weather", "birthdays", "info".  Missing keys fall back to defaults.
+    component_labels: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Fill in default fonts from fonts.py when callables were not provided."""
@@ -136,7 +146,7 @@ class Theme:
 # ---------------------------------------------------------------------------
 
 AVAILABLE_THEMES: frozenset[str] = frozenset(
-    {"default", "cyberpunk", "minimalist", "old_fashioned", "today"}
+    {"default", "cyberpunk", "minimalist", "old_fashioned", "today", "dnd_fantasy"}
 )
 
 
@@ -186,6 +196,9 @@ def load_theme(name: str) -> Theme:
     if name == "today":
         from src.render.themes.today import today_theme
         return today_theme()
+    if name == "dnd_fantasy":
+        from src.render.themes.dnd_fantasy import dnd_fantasy_theme
+        return dnd_fantasy_theme()
     raise ValueError(
         f"Unknown theme: {name!r}. Available: {', '.join(sorted(AVAILABLE_THEMES))}"
     )

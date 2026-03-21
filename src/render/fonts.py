@@ -71,6 +71,31 @@ def dm_bold(size: int) -> ImageFont.FreeTypeFont:
     return _get_dm_sans(size, 700)
 
 
+# Cinzel — Roman inscription caps, used for the D&D Fantasy theme.
+# Variable font with a single weight axis (wght 400–900).
+@lru_cache(maxsize=32)
+def _get_cinzel(size: int, wght: int) -> ImageFont.FreeTypeFont:
+    font = ImageFont.truetype(str(FONT_DIR / "Cinzel.ttf"), size)
+    font.set_variation_by_axes([wght])
+    return font
+
+
+def cinzel_regular(size: int) -> ImageFont.FreeTypeFont:
+    return _get_cinzel(size, 400)
+
+
+def cinzel_semibold(size: int) -> ImageFont.FreeTypeFont:
+    return _get_cinzel(size, 600)
+
+
+def cinzel_bold(size: int) -> ImageFont.FreeTypeFont:
+    return _get_cinzel(size, 700)
+
+
+def cinzel_black(size: int) -> ImageFont.FreeTypeFont:
+    return _get_cinzel(size, 900)
+
+
 # Playfair Display — newspaper serif font for the Old Fashioned theme.
 def playfair_regular(size: int) -> ImageFont.FreeTypeFont:
     return get_font("PlayfairDisplay-Regular.ttf", size)

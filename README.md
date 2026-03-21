@@ -16,7 +16,7 @@ changing proportions, and removing sections entirely. Switch themes with a singl
 `config.yaml`:
 
 ```yaml
-theme: cyberpunk   # default | cyberpunk | minimalist | old_fashioned | today
+theme: cyberpunk   # default | cyberpunk | minimalist | old_fashioned | today | dnd_fantasy
 ```
 
 ### default
@@ -59,6 +59,24 @@ Focused single-day view. The 7-day grid is replaced by a large inverted date pan
 current day's schedule matters more than the full week.
 
 ![Today theme](output/theme_today.png)
+
+### dnd_fantasy
+
+Swords & sorcery aesthetic inspired by D&D rulebooks. A dramatically different layout:
+a 215px **Arcane Tower** sidebar on the left stacks the oracle's weather, the fellowship
+of birthdays, and ancient wisdom (quote) vertically, while the full-height **Quest Log**
+calendar dominates the right 585px.
+
+The canvas is **black** with white text throughout. All headers and section labels use
+[Cinzel](https://fonts.google.com/specimen/Cinzel) — a Roman stone-inscription typeface
+identical in spirit to D&D chapter headings — while event body text stays in Plus Jakarta
+Sans for legibility at small sizes. Every panel is sealed inside an ornamental
+double-frame border with nested-diamond corner pieces; a triple vertical rule with three
+diamond ornaments divides the sidebar from the calendar; and double horizontal rules with
+centrepiece diamonds separate the sidebar panels. Section labels read **THE ORACLE'S
+OMEN**, **THE FELLOWSHIP**, and **ANCIENT WISDOM**.
+
+![D&D Fantasy theme](output/theme_dnd_fantasy.png)
 
 ### Creating your own theme
 
@@ -140,6 +158,13 @@ EOF
 | `font_medium` | callable | Plus Jakarta Sans Medium | |
 | `font_semibold` | callable | Plus Jakarta Sans SemiBold | |
 | `font_bold` | callable | Plus Jakarta Sans Bold | |
+| `component_labels` | `dict[str, str]` | `{}` | Override section label text: keys `"weather"`, `"birthdays"`, `"info"` |
+
+**`ThemeLayout` also supports:**
+
+| Field | Type | Default | Effect |
+|---|---|---|---|
+| `overlay_fn` | callable or `None` | `None` | `(draw, layout, style) → None` called after all components; use for decorative borders |
 
 To hide a component entirely, set `visible=False` on its `ComponentRegion`:
 
@@ -156,8 +181,8 @@ For full details see the **Theme System** section in [`CLAUDE.md`](CLAUDE.md).
 ### Display & Rendering
 
 - **Weekly calendar view** — 7-day grid (Mon–Sun) with timed and all-day events from
-  Google Calendar; event locations shown below each title; per-day busy-ness dots and
-  forecast icons in column headers
+  Google Calendar; event locations shown below each title; per-day busy-ness dots in
+  column headers
 - **Multi-day spanning events** — all-day events spanning multiple days render as
   continuous bars across columns rather than repeated per-day
 - **Adaptive event density** — automatically switches between normal, compact, and dense
@@ -166,8 +191,7 @@ For full details see the **Theme System** section in [`CLAUDE.md`](CLAUDE.md).
 - **Weather panel** — current conditions, high/low, wind speed with compass direction,
   UV index, 3-day forecast strip, active weather alerts, and moon phase icon via
   OpenWeatherMap
-- **Extended forecast** — up to 6 days of forecast data; small weather icons appear in
-  each week-view day header for a unified week-at-a-glance
+- **Extended forecast** — up to 6 days of forecast data displayed in the weather panel forecast strip
 - **Moon phase** — pure-math lunar phase calculation (no API needed)
 - **Birthdays** — upcoming birthdays from a local JSON file, Google Calendar, or Google
   Contacts with countdown and milestone age display
@@ -176,7 +200,7 @@ For full details see the **Theme System** section in [`CLAUDE.md`](CLAUDE.md).
 
 ### Themes
 
-- **Five built-in themes** — `default`, `cyberpunk`, `minimalist`, `old_fashioned`, `today`
+- **Six built-in themes** — `default`, `cyberpunk`, `minimalist`, `old_fashioned`, `today`, `dnd_fantasy`
 - **Fully structural** — themes can reposition components, change proportions, and hide
   sections, not just swap colors
 - **Two-line setup** — create a factory function + register a name; no component code
@@ -285,7 +309,7 @@ make setup
 | `weather.latitude` / `longitude` | Your location |
 | `weather.units` | `imperial` (°F) or `metric` (°C) |
 | `timezone` | IANA timezone, e.g. `America/Los_Angeles`. Use `local` for system clock. |
-| `theme` | *(optional)* `default`, `cyberpunk`, `minimalist`, `old_fashioned`, or `today` |
+| `theme` | *(optional)* `default`, `cyberpunk`, `minimalist`, `old_fashioned`, `today`, or `dnd_fantasy` |
 
 ### 3. Preview
 
@@ -576,8 +600,12 @@ Dashboard-v3/
 
 | Font | Used for |
 |---|---|
-| [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) (Regular, Medium, SemiBold, Bold) | All UI text — header, labels, timestamps, event titles, weather details, quote |
+| [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) (Regular, Medium, SemiBold, Bold) | Default UI text — header, labels, timestamps, event titles, weather details, quote |
 | [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather condition icons and moon phase glyphs |
+| [Cinzel](https://fonts.google.com/specimen/Cinzel) (variable, 400–900) | `dnd_fantasy` theme — Roman inscription caps for headers and section labels |
+| [DM Sans](https://fonts.google.com/specimen/DM+Sans) (variable) | `minimalist` theme — screen-optimised geometric sans |
+| [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) | `cyberpunk` theme — monospace terminal font |
+| [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | `old_fashioned` theme — newspaper broadsheet serif |
 
 Custom fonts can be added per-theme via `ThemeStyle.font_*` callables — see [Creating your own theme](#creating-your-own-theme).
 
