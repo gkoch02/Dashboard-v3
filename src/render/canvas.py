@@ -99,6 +99,10 @@ def render_dashboard(
         if drawer is not None:
             drawer()
 
+    # Optional theme overlay (e.g. decorative borders drawn on top of all components)
+    if layout.overlay_fn is not None:
+        layout.overlay_fn(draw, layout, style)
+
     # Scale to native display resolution when it differs from the base canvas size
     if (config.width, config.height) != (layout.canvas_w, layout.canvas_h):
         image = (

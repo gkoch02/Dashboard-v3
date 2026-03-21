@@ -110,7 +110,8 @@ def draw_info(
 
     # Section label
     label_font = style.label_font()
-    draw.text((x0 + pad, y0 + pad), "QUOTE OF THE DAY", font=label_font, fill=style.fg)
+    info_label = style.component_labels.get("info", "QUOTE OF THE DAY")
+    draw.text((x0 + pad, y0 + pad), info_label, font=label_font, fill=style.fg)
 
     quote = _quote_for_today(today)
 

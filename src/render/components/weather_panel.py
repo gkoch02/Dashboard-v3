@@ -40,13 +40,14 @@ def draw_weather(
 
     # Section label + moon phase icon
     label_font = style.label_font()
-    draw.text((x0 + pad, y0 + pad), "WEATHER", font=label_font, fill=style.fg)
+    weather_label = style.component_labels.get("weather", "WEATHER")
+    draw.text((x0 + pad, y0 + pad), weather_label, font=label_font, fill=style.fg)
 
     if today is not None:
         moon_glyph = moon_phase_glyph(today)
         moon_size = 20
         moon_font = weather_icon_font(moon_size)
-        label_bbox = draw.textbbox((0, 0), "WEATHER", font=label_font)
+        label_bbox = draw.textbbox((0, 0), weather_label, font=label_font)
         label_mid_y = y0 + pad + label_bbox[1] + (label_bbox[3] - label_bbox[1]) // 2
         moon_bbox = draw.textbbox((0, 0), moon_glyph, font=moon_font)
         moon_glyph_w = moon_bbox[2] - moon_bbox[0]

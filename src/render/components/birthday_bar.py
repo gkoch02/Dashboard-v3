@@ -39,7 +39,8 @@ def draw_birthdays(
 
     # Section label
     label_font = style.label_font()
-    draw.text((x0 + pad, y0 + pad), "BIRTHDAYS", font=label_font, fill=style.fg)
+    birthdays_label = style.component_labels.get("birthdays", "BIRTHDAYS")
+    draw.text((x0 + pad, y0 + pad), birthdays_label, font=label_font, fill=style.fg)
 
     if not birthdays:
         empty_font = style.font_regular(12)
