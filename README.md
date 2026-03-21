@@ -170,7 +170,7 @@ birthdays:
 Switch the entire dashboard layout and visual style with one line:
 
 ```yaml
-theme: cyberpunk   # default | cyberpunk | minimalist | old_fashioned | today | dnd_fantasy
+theme: terminal   # default | terminal | minimalist | old_fashioned | today | fantasy
 ```
 
 Themes control component positions, proportions, fonts, and visual style -- not just
@@ -185,12 +185,12 @@ event bars. 7-day calendar grid with weather/birthdays/quote along the bottom.
 
 ![Default theme](output/theme_default.png)
 
-#### cyberpunk
+#### terminal
 
 Inverted canvas: **black background** with white text. Uses Share Tech Mono for a terminal
 aesthetic. Tighter event spacing. Today's column pops as a white-fill/black-text block.
 
-![Cyberpunk theme](output/theme_cyberpunk.png)
+![Terminal theme](output/theme_terminal.png)
 
 #### minimalist
 
@@ -215,13 +215,13 @@ desk display.
 
 ![Today theme](output/theme_today.png)
 
-#### dnd_fantasy
+#### fantasy
 
 D&D-inspired aesthetic. Black canvas with Cinzel stone-inscription headers. A 215px sidebar
 ("Arcane Tower") stacks weather, birthdays, and quote. The "Quest Log" calendar fills the
 right side. Ornamental double-frame borders with diamond corner pieces.
 
-![D&D Fantasy theme](output/theme_dnd_fantasy.png)
+![Fantasy theme](output/theme_fantasy.png)
 
 ### Creating your own theme
 
@@ -586,11 +586,11 @@ Dashboard-v3/
 │       ├── moon.py               # Pure-math moon phase calculator
 │       ├── primitives.py         # Shared draw helpers (truncation, wrapping)
 │       ├── themes/               # Built-in theme factories
-│       │   ├── cyberpunk.py
+│       │   ├── terminal.py
 │       │   ├── minimalist.py
 │       │   ├── old_fashioned.py
 │       │   ├── today.py
-│       │   └── dnd_fantasy.py
+│       │   └── fantasy.py
 │       └── components/           # One file per UI region
 │           ├── header.py
 │           ├── week_view.py
@@ -612,10 +612,10 @@ Dashboard-v3/
 |---|---|
 | [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) | Default UI text (all themes) |
 | [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather condition icons + moon phase glyphs |
-| [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) | `cyberpunk` theme |
+| [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) | `terminal` theme |
 | [DM Sans](https://fonts.google.com/specimen/DM+Sans) | `minimalist` theme |
 | [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | `old_fashioned` theme |
-| [Cinzel](https://fonts.google.com/specimen/Cinzel) | `dnd_fantasy` theme |
+| [Cinzel](https://fonts.google.com/specimen/Cinzel) | `fantasy` theme |
 
 Custom fonts can be added per-theme via `ThemeStyle` font callables -- see
 [Creating your own theme](#creating-your-own-theme) and [`CLAUDE.md`](CLAUDE.md).

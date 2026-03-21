@@ -174,8 +174,8 @@ def _draw_fantasy_overlay(
 # Theme factory
 # ---------------------------------------------------------------------------
 
-def dnd_fantasy_theme() -> Theme:
-    """Return the D&D Fantasy theme — dark canvas, Cinzel headers, ornamental borders."""
+def fantasy_theme() -> Theme:
+    """Return the Fantasy theme — dark canvas, Cinzel headers, ornamental borders."""
 
     layout = ThemeLayout(
         canvas_w=_CANVAS_W,
@@ -215,4 +215,4 @@ def dnd_fantasy_theme() -> Theme:
         },
     )
 
-    return Theme(name="dnd_fantasy", style=style, layout=layout)
+    return Theme(name="fantasy", style=style, layout=layout)
