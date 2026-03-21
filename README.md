@@ -1,293 +1,16 @@
 # Home Dashboard
 
-A Python-based eInk dashboard for Raspberry Pi that displays your week's calendar events,
-current weather, upcoming birthdays, and a daily quote — on any supported Waveshare eInk
-display (black & white).
+A Python eInk dashboard for Raspberry Pi. Displays your weekly calendar, current weather,
+upcoming birthdays, and a daily quote on any supported Waveshare black-and-white eInk
+display.
 
 ![Default theme preview](output/theme_default.png)
 
 ---
 
-## Themes
-
-Version 3 introduces a full theme system. Themes are not limited to colors or fonts —
-each one can define an entirely different layout, moving components to different positions,
-changing proportions, and removing sections entirely. Switch themes with a single line in
-`config.yaml`:
-
-```yaml
-theme: cyberpunk   # default | cyberpunk | minimalist | old_fashioned | today | dnd_fantasy
-```
-
-### default
-
-The classic layout. Black text on white. Filled black header, today column, and all-day
-event bars. 7-day calendar grid takes center stage.
-
-![Default theme](output/theme_default.png)
-
-### cyberpunk
-
-Same geometry as default, but the canvas is **black** with white text throughout.
-Today's column pops with an inverted white-fill/black-text block. Tighter event spacing
-packs more information into the same space.
-
-![Cyberpunk theme](output/theme_cyberpunk.png)
-
-### minimalist
-
-A slimmer 30px header gives the calendar more vertical room (340px vs 320px). All-day
-events render as outlined bars instead of filled blocks. Section labels use regular weight.
-Generous spacing between events for a cleaner, less busy look.
-
-![Minimalist theme](output/theme_minimalist.png)
-
-### old_fashioned
-
-Structural rearrangement: the 7-day calendar occupies the full left 62% of the screen.
-Weather, birthdays, and the daily quote stack vertically in the right column. A taller,
-more formal 56px header. Placeholder for an optional serif font.
-
-![Old Fashioned theme](output/theme_old_fashioned.png)
-
-### today
-
-Focused single-day view. The 7-day grid is replaced by a large inverted date panel
-(day name, 90pt date number, month) on the left and a spacious event list on the right
-— large fonts, full time ranges, and locations all visible without squinting. Taller
-60px header and 140px bottom strip. Ideal for a kitchen or desk display where the
-current day's schedule matters more than the full week.
-
-![Today theme](output/theme_today.png)
-
-### dnd_fantasy
-
-Swords & sorcery aesthetic inspired by D&D rulebooks. A dramatically different layout:
-a 215px **Arcane Tower** sidebar on the left stacks the oracle's weather, the fellowship
-of birthdays, and ancient wisdom (quote) vertically, while the full-height **Quest Log**
-calendar dominates the right 585px.
-
-The canvas is **black** with white text throughout. All headers and section labels use
-[Cinzel](https://fonts.google.com/specimen/Cinzel) — a Roman stone-inscription typeface
-identical in spirit to D&D chapter headings — while event body text stays in Plus Jakarta
-Sans for legibility at small sizes. Every panel is sealed inside an ornamental
-double-frame border with nested-diamond corner pieces; a triple vertical rule with three
-diamond ornaments divides the sidebar from the calendar; and double horizontal rules with
-centrepiece diamonds separate the sidebar panels. Section labels read **THE ORACLE'S
-OMEN**, **THE FELLOWSHIP**, and **ANCIENT WISDOM**.
-
-![D&D Fantasy theme](output/theme_dnd_fantasy.png)
-
-### Creating your own theme
-
-Adding a new theme requires two steps — no changes to any component code:
-
-**1. Create `src/render/themes/<name>.py`:**
-
-```python
-from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
-
-def retro_theme() -> Theme:
-    return Theme(
-        name="retro",
-        layout=ThemeLayout(
-            canvas_w=800, canvas_h=480,
-            # Calendar on the left, info panels stacked on the right
-            header=ComponentRegion(0, 0, 800, 48),
-            week_view=ComponentRegion(0, 48, 540, 432),
-            weather=ComponentRegion(540, 48, 260, 144),
-            birthdays=ComponentRegion(540, 192, 260, 144),
-            info=ComponentRegion(540, 336, 260, 144),
-        ),
-        style=ThemeStyle(
-            invert_header=True,
-            invert_today_col=True,
-            invert_allday_bars=False,   # outlined all-day bars
-            spacing_scale=1.1,
-            label_font_size=11,
-            label_font_weight="semibold",
-        ),
-    )
-```
-
-**2. Register it in `src/render/theme.py`:**
-
-```python
-# In load_theme():
-if name == "retro":
-    from src.render.themes.retro import retro_theme
-    return retro_theme()
-
-# In AVAILABLE_THEMES:
-AVAILABLE_THEMES: frozenset[str] = frozenset(
-    {"default", "cyberpunk", "minimalist", "old_fashioned", "retro"}
-)
-```
-
-Then preview it instantly with no config file:
-
-```bash
-python -m src.main --dry-run --dummy --config /dev/stdin <<'EOF'
-theme: retro
-display:
-  model: "epd7in5_V2"
-weather:
-  api_key: "dummy"
-  latitude: 40.7128
-  longitude: -74.0060
-google:
-  service_account_path: "credentials/service_account.json"
-  calendar_id: "dummy@group.calendar.google.com"
-EOF
-# open output/latest.png
-```
-
-**ThemeStyle reference:**
-
-| Field | Type | Default | Effect |
-|---|---|---|---|
-| `fg` | `int` | `0` (black) | Foreground color for text and lines |
-| `bg` | `int` | `1` (white) | Canvas background color |
-| `invert_header` | `bool` | `True` | Fill header bar with `fg`, draw text in `bg` |
-| `invert_today_col` | `bool` | `True` | Fill today's column header with `fg` |
-| `invert_allday_bars` | `bool` | `True` | Solid-fill all-day event bars vs. outlined |
-| `spacing_scale` | `float` | `1.0` | Multiplier on event row spacing (>1 = more breathing room, <1 = tighter) |
-| `label_font_size` | `int` | `12` | Point size for "WEATHER" / "BIRTHDAYS" / "QUOTE" section labels |
-| `label_font_weight` | `str` | `"bold"` | Font weight for section labels: `"bold"`, `"semibold"`, or `"regular"` |
-| `font_regular` | callable | Plus Jakarta Sans Regular | Override with any `(size) -> FreeTypeFont` function |
-| `font_medium` | callable | Plus Jakarta Sans Medium | |
-| `font_semibold` | callable | Plus Jakarta Sans SemiBold | |
-| `font_bold` | callable | Plus Jakarta Sans Bold | |
-| `component_labels` | `dict[str, str]` | `{}` | Override section label text: keys `"weather"`, `"birthdays"`, `"info"` |
-
-**`ThemeLayout` also supports:**
-
-| Field | Type | Default | Effect |
-|---|---|---|---|
-| `overlay_fn` | callable or `None` | `None` | `(draw, layout, style) → None` called after all components; use for decorative borders |
-
-To hide a component entirely, set `visible=False` on its `ComponentRegion`:
-
-```python
-info=ComponentRegion(550, 360, 250, 120, visible=False)
-```
-
-For full details see the **Theme System** section in [`CLAUDE.md`](CLAUDE.md).
-
----
-
-## Features
-
-### Display & Rendering
-
-- **Weekly calendar view** — 7-day grid (Mon–Sun) with timed and all-day events from
-  Google Calendar; event locations shown below each title
-- **Multi-day spanning events** — all-day events spanning multiple days render as
-  continuous bars across columns rather than repeated per-day
-- **Adaptive event density** — automatically switches between normal, compact, and dense
-  rendering tiers based on event count, using smaller fonts and tighter spacing
-  to fit more events before showing "+N more"
-- **Weather panel** — current conditions, high/low, wind speed with compass direction,
-  UV index, 3-day forecast strip, active weather alerts, and moon phase icon via
-  OpenWeatherMap
-- **Extended forecast** — up to 6 days of forecast data displayed in the weather panel forecast strip
-- **Moon phase** — pure-math lunar phase calculation (no API needed)
-- **Birthdays** — upcoming birthdays from a local JSON file, Google Calendar, or Google
-  Contacts with countdown and milestone age display
-- **Daily quote** — deterministic daily rotation from a configurable pool (125 default
-  quotes spanning sci-fi, science, philosophy, and wit)
-
-### Themes
-
-- **Six built-in themes** — `default`, `cyberpunk`, `minimalist`, `old_fashioned`, `today`, `dnd_fantasy`
-- **Fully structural** — themes can reposition components, change proportions, and hide
-  sections, not just swap colors
-- **Two-line setup** — create a factory function + register a name; no component code
-  changes required
-- **Custom fonts** — supply any `(size) -> FreeTypeFont` callable in `ThemeStyle` to use
-  a different typeface per theme
-
-### Data & Caching
-
-- **Per-source fetch intervals** — configurable refresh intervals per data source;
-  skips API calls when cached data is still fresh
-- **Cache TTL with staleness gradation** — FRESH → AGING → STALE → EXPIRED; expired
-  data is discarded rather than displayed; header shows `! Stale` indicator
-- **Event filtering** — hide events by calendar name, keyword, or all-day status without
-  removing them from cache
-- **Incremental calendar sync** — only changed events downloaded after the first fetch,
-  reducing Google Calendar API quota usage
-- **Parallel data fetching** — calendar, weather, and birthday calls run concurrently
-
-### Reliability
-
-- **Circuit breaker** — backs off automatically after N consecutive failures; single
-  probe request after cooldown; resets on success
-- **API quota awareness** — daily request counter per source with configurable warning
-  thresholds; auto-resets each day
-- **Conditional display refresh** — SHA-256 image diffing skips eInk updates when
-  nothing changed, extending display lifespan
-
----
-
-## Hardware
-
-- Raspberry Pi (any model with SPI) — Pi Zero 2 WH recommended
-- A supported Waveshare eInk display connected via the 40-pin GPIO HAT
-
-See the [Bill of Materials](#bill-of-materials) below for specific part recommendations.
-
----
-
-## Bill of Materials
-
-A minimal build (Pi Zero 2 W + 7.5" display) runs **~$65–75** all-in.
-
-### Required
-
-| Component | Recommended | Notes | Approx. Price |
-|---|---|---|---|
-| **Raspberry Pi** | [Pi Zero 2 WH](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) | Buy the **WH** variant (with headers) to avoid soldering. | $15 |
-| | [Pi 4 Model B (2 GB)](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) | If you already own one or want headroom for other tasks | $45 |
-| **eInk display** | [Waveshare 7.5" HAT V2](https://www.waveshare.com/7.5inch-e-paper-hat.htm) (800×480, B&W) | The default `epd7in5_V2` model. Plugs directly onto the Pi's 40-pin GPIO header. | ~$30–35 |
-| **MicroSD card** | SanDisk Ultra 32 GB or Samsung Evo Select 32 GB | Class 10 / A1 minimum. | ~$8–10 |
-| **Power supply** | [Official Pi Zero PSU](https://www.raspberrypi.com/products/micro-usb-power-supply/) (5 V 2.5 A, micro-USB) | Use the [USB-C PSU](https://www.raspberrypi.com/products/type-c-power-supply/) for Pi 4. | ~$8–12 |
-
-### Optional
-
-| Component | Notes | Approx. Price |
-|---|---|---|
-| **Picture frame** | A standard 7"×5" or 8"×6" frame can be modified to seat the display panel | ~$10–20 |
-| **3D-printed stand** | Search "Waveshare 7.5 eink frame" on Printables / Thingiverse | Free |
-| **Short micro-USB cable** | For routing power inside a frame or enclosure | ~$5 |
-
-### Display model alternatives
-
-| Model | Resolution | Notes |
-|---|---|---|
-| `epd7in5` | 640×384 | V1 (older) |
-| `epd7in5_V2` | 800×480 | **Default / recommended** |
-| `epd7in5_V3` | 800×480 | V3 variant |
-| `epd7in5b_V2` | 800×480 | B/W/Red — codebase renders B&W only |
-| `epd7in5_HD` | 880×528 | HD variant |
-| `epd9in7` | 1200×825 | 9.7" |
-| `epd13in3k` | 1600×1200 | 13.3" |
-
-> Prices are approximate as of early 2026 and vary by retailer.
-
----
-
-## Prerequisites
-
-- **Python 3.9+** — `python3 --version`
-- **git** — `git --version`
-- **make** — pre-installed on macOS and most Linux; on Windows use WSL
-
----
-
 ## Quick Start
 
-### 1. Clone and set up
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/gkoch02/Dashboard-v3.git
@@ -295,95 +18,113 @@ cd Dashboard-v3
 make setup
 ```
 
+This creates a virtual environment, installs dependencies, and copies the config template
+to `config/config.yaml`.
+
 ### 2. Configure
 
-`make setup` creates `config/config.yaml` from the template. Open it and fill in:
+Open `config/config.yaml` and fill in the required fields:
 
-| Field | What to put here |
-|---|---|
-| `display.model` | Your Waveshare model (see table above) |
-| `google.service_account_path` | Path to your service account JSON (see [Google Calendar Setup](#google-calendar-setup)) |
-| `google.calendar_id` | Your Google Calendar ID |
-| `weather.api_key` | Your [OpenWeatherMap](https://openweathermap.org/api) API key (free tier) |
-| `weather.latitude` / `longitude` | Your location |
-| `weather.units` | `imperial` (°F) or `metric` (°C) |
-| `timezone` | IANA timezone, e.g. `America/Los_Angeles`. Use `local` for system clock. |
-| `theme` | *(optional)* `default`, `cyberpunk`, `minimalist`, `old_fashioned`, `today`, or `dnd_fantasy` |
+```yaml
+display:
+  model: "epd7in5_V2"          # your Waveshare model (see supported list below)
 
-### 3. Preview
+google:
+  service_account_path: "credentials/service_account.json"
+  calendar_id: "abc123@group.calendar.google.com"
+
+weather:
+  api_key: "your-openweathermap-key"
+  latitude: 40.7128
+  longitude: -74.0060
+  units: "imperial"             # "imperial" (F) or "metric" (C)
+
+timezone: "America/New_York"    # IANA timezone, or "local" for system clock
+```
+
+See [Google Calendar Setup](#google-calendar-setup) for how to get a service account and
+calendar ID. Get a free weather API key at [openweathermap.org](https://openweathermap.org/api).
+
+### 3. Preview with dummy data
 
 ```bash
 make dry
 ```
 
-Renders `output/latest.png` with dummy data. To preview a specific theme:
+Opens `output/latest.png` with realistic dummy data. No API keys or hardware needed.
+
+### 4. Preview with live data
 
 ```bash
-venv/bin/python -m src.main --dry-run --dummy --config /dev/stdin <<'EOF'
-theme: cyberpunk
-display:
-  model: "epd7in5_V2"
-weather:
-  api_key: "dummy"
-  latitude: 40.7128
-  longitude: -74.0060
-google:
-  service_account_path: "credentials/service_account.json"
-  calendar_id: "dummy@group.calendar.google.com"
-EOF
+venv/bin/python -m src.main --dry-run --config config/config.yaml
 ```
 
-### 4. Run with live data
+Fetches real calendar/weather data and renders to `output/latest.png`.
+
+### 5. Validate your config
 
 ```bash
-venv/bin/python -m src.main --config config/config.yaml
+make check
 ```
+
+Reports errors (must fix) and warnings (may cause issues) in your configuration.
 
 ---
 
 ## Google Calendar Setup
 
-You need a **Google service account** — a credential that lets the dashboard read your
-calendar without interactive login.
+The dashboard reads your calendar via a **Google service account** (no interactive login
+needed).
 
-### Step 1 — Create a Google Cloud project
+### Step 1 -- Create a Google Cloud project
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com) and sign in
-2. Click the project dropdown → **New Project** → give it a name → **Create**
+2. Click the project dropdown > **New Project** > name it > **Create**
 
-### Step 2 — Enable the Google Calendar API
+### Step 2 -- Enable the Calendar API
 
-1. **APIs & Services → Library** → search **Google Calendar API** → **Enable**
+1. Go to **APIs & Services > Library**
+2. Search **Google Calendar API** > **Enable**
 
-### Step 3 — Create a service account
+### Step 3 -- Create a service account
 
-1. **APIs & Services → Credentials → + Create Credentials → Service account**
-2. Give it a name (e.g. `dashboard-reader`) → **Create and Continue** → **Done**
+1. Go to **APIs & Services > Credentials > + Create Credentials > Service account**
+2. Name it (e.g. `dashboard-reader`) > **Create and Continue** > **Done**
 
-### Step 4 — Download the key file
+### Step 4 -- Download the key
 
-1. Click the service account → **Keys** tab → **Add Key → Create new key → JSON**
+1. Click the service account > **Keys** tab > **Add Key > Create new key > JSON**
 2. Move the downloaded file to `credentials/service_account.json`
 
-> `credentials/` is git-ignored and will never be accidentally committed.
+> The `credentials/` directory is git-ignored.
 
-### Step 5 — Share your calendar
+### Step 5 -- Share your calendar
 
-1. Copy the service account email (e.g. `dashboard-reader@your-project.iam.gserviceaccount.com`)
-2. In [Google Calendar](https://calendar.google.com), click ⋮ next to your calendar →
-   **Settings and sharing → Share with specific people → + Add people**
-3. Paste the email, set **See all event details**, click **Send**
+1. Copy the service account email (looks like `dashboard-reader@your-project.iam.gserviceaccount.com`)
+2. In [Google Calendar](https://calendar.google.com), click the three-dot menu next to your
+   calendar > **Settings and sharing > Share with specific people > + Add people**
+3. Paste the email, set permission to **See all event details**, click **Send**
 
-### Step 6 — Find your Calendar ID
+### Step 6 -- Find your Calendar ID
 
-1. In the same calendar settings, scroll to **Integrate calendar**
+1. In the same calendar settings page, scroll to **Integrate calendar**
 2. Copy the **Calendar ID** and paste it into `google.calendar_id` in `config.yaml`
+
+To display events from additional calendars, share them with the same service account
+and list their IDs:
+
+```yaml
+google:
+  additional_calendars:
+    - "family@group.calendar.google.com"
+    - "work@group.calendar.google.com"
+```
 
 ---
 
 ## Birthday Configuration
 
-Set `birthdays.source` in config to one of:
+Set `birthdays.source` in config to one of three modes:
 
 ### `file` (default)
 
@@ -396,24 +137,23 @@ Create `config/birthdays.json`:
 ]
 ```
 
-Use `YYYY-MM-DD` to show age automatically, or `MM-DD` for name-only.
+Use `YYYY-MM-DD` to show age, or `MM-DD` for date only.
 
 ### `calendar`
 
-Events on your Google Calendar containing the `calendar_keyword` (default: `"Birthday"`)
-are read automatically — no extra setup.
+Events containing the keyword `"Birthday"` (configurable via `calendar_keyword`) are
+picked up automatically from your Google Calendar.
 
 ### `contacts`
 
-> Requires a **Google Workspace** (paid) account with admin access.
-
-Birthdays from Google Contacts via the People API. Setup:
+Reads birthdays from Google Contacts via the People API. Requires a **Google Workspace**
+account with domain-wide delegation:
 
 1. Enable the **People API** in Cloud Console
-2. In [Google Workspace Admin](https://admin.google.com) → **Security → API controls →
-   Manage domain-wide delegation → Add new**: enter the service account's client ID and
+2. In [Google Workspace Admin](https://admin.google.com) > **Security > API controls >
+   Manage domain-wide delegation > Add new**: enter the service account's client ID and
    scope `https://www.googleapis.com/auth/contacts.readonly`
-3. Add to `config.yaml`:
+3. Set in `config.yaml`:
 
 ```yaml
 google:
@@ -425,16 +165,128 @@ birthdays:
 
 ---
 
-## Deployment on Raspberry Pi
+## Themes
 
-### Step 1 — Enable SPI
+Switch the entire dashboard layout and visual style with one line:
+
+```yaml
+theme: cyberpunk   # default | cyberpunk | minimalist | old_fashioned | today | dnd_fantasy
+```
+
+Themes control component positions, proportions, fonts, and visual style -- not just
+colors. Each theme can hide sections, rearrange panels, or use entirely different fonts.
+
+### Built-in themes
+
+#### default
+
+Classic layout. Black text on white. Filled black header, today column, and all-day
+event bars. 7-day calendar grid with weather/birthdays/quote along the bottom.
+
+![Default theme](output/theme_default.png)
+
+#### cyberpunk
+
+Inverted canvas: **black background** with white text. Uses Share Tech Mono for a terminal
+aesthetic. Tighter event spacing. Today's column pops as a white-fill/black-text block.
+
+![Cyberpunk theme](output/theme_cyberpunk.png)
+
+#### minimalist
+
+Slim 22px header gives the calendar more room. Outlined all-day bars instead of filled
+blocks. DM Sans font. Generous spacing for a clean, editorial look. Birthdays panel
+hidden by default.
+
+![Minimalist theme](output/theme_minimalist.png)
+
+#### old_fashioned
+
+Newspaper-style layout: a single-day view on the left with Playfair Display serif font,
+weather/birthdays/quote stacked vertically on the right. Taller 56px header.
+
+![Old Fashioned theme](output/theme_old_fashioned.png)
+
+#### today
+
+Single-day focused view. Large inverted date panel on the left, spacious event list on the
+right with full time ranges and locations. 60px header, 140px bottom strip. Ideal for a
+desk display.
+
+![Today theme](output/theme_today.png)
+
+#### dnd_fantasy
+
+D&D-inspired aesthetic. Black canvas with Cinzel stone-inscription headers. A 215px sidebar
+("Arcane Tower") stacks weather, birthdays, and quote. The "Quest Log" calendar fills the
+right side. Ornamental double-frame borders with diamond corner pieces.
+
+![D&D Fantasy theme](output/theme_dnd_fantasy.png)
+
+### Creating your own theme
+
+Two steps -- no changes to any component code:
+
+**1. Create `src/render/themes/<name>.py`:**
+
+```python
+from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
+
+def retro_theme() -> Theme:
+    return Theme(
+        name="retro",
+        layout=ThemeLayout(
+            canvas_w=800, canvas_h=480,
+            header=ComponentRegion(0, 0, 800, 48),
+            week_view=ComponentRegion(0, 48, 540, 432),
+            weather=ComponentRegion(540, 48, 260, 144),
+            birthdays=ComponentRegion(540, 192, 260, 144),
+            info=ComponentRegion(540, 336, 260, 144),
+        ),
+        style=ThemeStyle(
+            invert_header=True,
+            invert_today_col=True,
+            invert_allday_bars=False,
+            spacing_scale=1.1,
+        ),
+    )
+```
+
+**2. Register in `src/render/theme.py`:**
+
+Add a clause to `load_theme()` and add the name to `AVAILABLE_THEMES`.
+
+Then preview:
+
+```bash
+venv/bin/python -m src.main --dry-run --dummy --config /dev/stdin <<'EOF'
+theme: retro
+display:
+  model: "epd7in5_V2"
+weather:
+  api_key: "dummy"
+  latitude: 40.7
+  longitude: -74.0
+google:
+  service_account_path: "credentials/service_account.json"
+  calendar_id: "dummy@group.calendar.google.com"
+EOF
+```
+
+See the theme reference tables and font customization guide in [`CLAUDE.md`](CLAUDE.md).
+
+---
+
+## Raspberry Pi Deployment
+
+### Step 1 -- Enable SPI
 
 ```bash
 sudo raspi-config
-# Interface Options → SPI → Yes → reboot
+# Interface Options > SPI > Yes > reboot
 ```
 
-### Step 2 — Deploy the project
+### Step 2 -- Deploy the project
 
 From your development machine:
 
@@ -442,9 +294,10 @@ From your development machine:
 make deploy
 ```
 
-Rsyncs to `~/home-dashboard/` on `pi@raspberrypi.local` (adjust hostname in `Makefile` if needed).
+Rsyncs to `~/home-dashboard/` on `pi@raspberrypi.local`. Adjust the hostname in the
+`Makefile` if needed.
 
-### Step 3 — Set up the virtualenv on the Pi
+### Step 3 -- Set up on the Pi
 
 ```bash
 sudo apt install swig liblgpio-dev
@@ -453,7 +306,7 @@ make setup
 venv/bin/pip install -r requirements-pi.txt
 ```
 
-### Step 4 — Install Waveshare display drivers
+### Step 4 -- Install Waveshare display drivers
 
 ```bash
 git clone https://github.com/waveshare/e-Paper ~/e-Paper
@@ -462,86 +315,162 @@ venv/bin/pip install ~/e-Paper/RaspberryPi_JetsonNano/python/
 venv/bin/python -c "import waveshare_epd; print('OK')"
 ```
 
-### Step 5 — Run once to verify
+### Step 5 -- Test
 
 ```bash
 venv/bin/python -m src.main --config config/config.yaml
 ```
 
-### Step 6 — Install the systemd timer
+### Step 6 -- Install the systemd timer
 
 ```bash
 make install
 ssh pi@raspberrypi.local "systemctl status dashboard.timer"
 ```
 
-The timer fires every 30 minutes and the app handles all scheduling internally:
+The timer fires every 30 minutes. The app handles scheduling internally:
 
 | Time window | Behaviour |
 |---|---|
-| First run at `quiet_hours_end` | Forced **full** eInk refresh |
-| All other active hours | 30-minute partial-refresh polling (full every 6 partials) |
-| `quiet_hours_start` → `quiet_hours_end` | Quiet — process exits immediately, no update |
+| `quiet_hours_start` to `quiet_hours_end` | Process exits immediately -- no fetch, render, or display write |
+| First run after quiet hours end | Forces a full eInk refresh |
+| All other active hours | Partial refresh every 30 min (full every 6 partials, ~3 hours) |
 
-Configure the window in `config.yaml`:
+Configure quiet hours:
 
 ```yaml
 schedule:
-  quiet_hours_start: 23   # 11 pm
-  quiet_hours_end: 6      # 6 am
+  quiet_hours_start: 23   # 11 PM
+  quiet_hours_end: 6      # 6 AM
 ```
 
 ---
 
-## Development
+## Supported Displays
 
-```bash
-make setup        # Create venv and install dependencies
-make dry          # Dry-run render with dummy data → output/latest.png
-make test         # Run test suite (pytest)
-make check        # Validate config file and exit
-make deploy       # rsync project to Raspberry Pi
-make install      # Copy systemd timer/service to Pi and enable
-```
+| Model | Resolution | Notes |
+|---|---|---|
+| `epd7in5` | 640x384 | V1 (older) |
+| `epd7in5_V2` | 800x480 | **Default / recommended** |
+| `epd7in5_V3` | 800x480 | V3 variant |
+| `epd7in5b_V2` | 800x480 | B/W/Red model -- renders B&W only |
+| `epd7in5_HD` | 880x528 | HD variant |
+| `epd9in7` | 1200x825 | 9.7 inch |
+| `epd13in3k` | 1600x1200 | 13.3 inch |
 
-### CLI flags
+Set `display.model` in `config.yaml`. Width and height are derived automatically from the
+model. The dashboard renders at 800x480 base resolution and scales to the display's native
+resolution via LANCZOS resampling.
 
-| Flag | Description |
-|---|---|
-| `--dry-run` | Save to PNG instead of pushing to display |
-| `--dummy` | Use built-in dummy data (no API calls) |
-| `--config PATH` | Path to config file (default: `config/config.yaml`) |
-| `--force-full-refresh` | Force a full eInk refresh; bypasses fetch intervals and circuit breakers |
-| `--check-config` | Validate config file and exit |
+---
 
-### Offline development
+## Hardware
 
-```bash
-venv/bin/python -m src.main --dry-run --dummy
-```
+### Bill of materials
 
-No API keys, credentials, or hardware needed.
+A minimal build (Pi Zero 2 W + 7.5" display) costs approximately **$65--75**.
+
+| Component | Recommended | Price |
+|---|---|---|
+| **Raspberry Pi** | [Pi Zero 2 WH](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) (with headers) | ~$15 |
+| **eInk display** | [Waveshare 7.5" HAT V2](https://www.waveshare.com/7.5inch-e-paper-hat.htm) (800x480) | ~$30--35 |
+| **MicroSD card** | 32 GB Class 10 / A1 | ~$8--10 |
+| **Power supply** | 5V 2.5A micro-USB (or USB-C for Pi 4) | ~$8--12 |
+
+Optional: picture frame, 3D-printed stand, short USB cable for routing inside an enclosure.
 
 ---
 
 ## Advanced Configuration
 
-### Cache TTL and Fetch Intervals
+### Full config reference
+
+All fields are optional. Missing fields use defaults shown below.
 
 ```yaml
+display:
+  model: "epd7in5_V2"             # Waveshare model name
+  # width: 800                    # override auto-derived width
+  # height: 480                   # override auto-derived height
+  enable_partial_refresh: false    # use partial eInk refresh (faster, lower quality)
+  max_partials_before_full: 6     # partial refreshes before forcing a full one
+  week_days: 7                    # number of days in the week view
+  show_weather: true
+  show_birthdays: true
+  show_info_panel: true
+
+google:
+  service_account_path: "credentials/service_account.json"
+  calendar_id: "primary"
+  additional_calendars: []
+  # contacts_email: "you@yourdomain.com"  # required for birthdays.source: "contacts"
+  daily_quota_warning: 500         # log warning when daily API calls exceed this
+
+weather:
+  api_key: ""
+  latitude: 0.0
+  longitude: 0.0
+  units: "imperial"                # "imperial", "metric", or "standard"
+
+birthdays:
+  source: "file"                   # "file", "calendar", or "contacts"
+  file_path: "config/birthdays.json"
+  calendar_keyword: "Birthday"
+  lookahead_days: 30
+
+schedule:
+  quiet_hours_start: 23            # hour (0-23)
+  quiet_hours_end: 6               # hour (0-23)
+
+timezone: "local"                  # IANA name or "local"
+title: "Home Dashboard"            # text shown in the header bar
+theme: "default"                   # see Themes section
+
 cache:
-  weather_ttl_minutes: 60       # data older than 4x this is discarded (EXPIRED)
+  weather_ttl_minutes: 60          # data older than 4x TTL is discarded
   events_ttl_minutes: 120
   birthdays_ttl_minutes: 1440
-  weather_fetch_interval: 30    # skip API call if cache is younger than this
+  weather_fetch_interval: 30       # skip API call if cache is younger
   events_fetch_interval: 120
   birthdays_fetch_interval: 1440
+  max_failures: 3                  # circuit breaker: failures before tripping
+  cooldown_minutes: 30             # circuit breaker: wait before probing
+
+filters:
+  exclude_calendars: []            # case-insensitive substring match
+  exclude_keywords: []             # case-insensitive match against event summary
+  exclude_all_day: false
+
+output:
+  dry_run_dir: "output"
+
+logging:
+  level: "INFO"
 ```
 
-Cached data progresses through **FRESH → AGING → STALE → EXPIRED**. The header shows
-`! Stale` when any source reaches STALE.
+### Cache and staleness
 
-### Event Filtering
+Cached data progresses through four levels based on age relative to its TTL:
+
+| Level | Age vs TTL | Behaviour |
+|---|---|---|
+| **FRESH** | <= TTL | Normal display |
+| **AGING** | 1--2x TTL | Normal display |
+| **STALE** | 2--4x TTL | Header shows "! Stale" indicator |
+| **EXPIRED** | > 4x TTL | Data discarded, not displayed |
+
+### Fetch intervals
+
+Each data source has an independent fetch interval. When cached data is younger than the
+interval, the API call is skipped entirely. This reduces API quota usage significantly.
+
+| Source | Default interval | Default TTL |
+|---|---|---|
+| Weather | 30 min | 60 min |
+| Calendar events | 120 min | 120 min |
+| Birthdays | 1440 min (24h) | 1440 min |
+
+### Event filtering
 
 ```yaml
 filters:
@@ -550,15 +479,71 @@ filters:
   exclude_all_day: false
 ```
 
-Case-insensitive substring matching. Filtered events stay in the cache for incremental
-sync correctness — they're only hidden at render time.
+Filters use case-insensitive substring matching. Filtered events remain in cache for
+incremental sync correctness -- they are only hidden at render time.
 
-### Circuit Breaker
+### Circuit breaker
 
-```yaml
-cache:
-  max_failures: 3        # consecutive failures before tripping
-  cooldown_minutes: 30   # wait before sending a probe request
+After 3 consecutive failures (configurable), a source is "tripped" and goes straight to
+cache on subsequent runs. After the cooldown period, a single probe request is sent. If it
+succeeds, normal fetching resumes.
+
+### Conditional display refresh
+
+The dashboard computes a SHA-256 hash of each rendered image and compares it to the
+previous render. When nothing has changed (common overnight or on quiet days), the eInk
+refresh is skipped entirely. This extends display lifespan and saves power.
+`--force-full-refresh` bypasses this check.
+
+### Incremental calendar sync
+
+After the first full sync, subsequent fetches download only changed events using Google
+Calendar sync tokens. This dramatically reduces API quota usage. Sync state is persisted
+to `output/calendar_sync_state.json`.
+
+---
+
+## Development
+
+### Prerequisites
+
+- **Python 3.9+**
+- **git**
+- **make** (pre-installed on macOS/Linux; use WSL on Windows)
+
+### Makefile targets
+
+| Command | What it does |
+|---|---|
+| `make setup` | Create venv, install dependencies, create config from template |
+| `make dry` | Render with dummy data to `output/latest.png` |
+| `make test` | Run `pytest tests/ -v` (591 tests across 25 files) |
+| `make check` | Validate config file and exit |
+| `make deploy` | rsync project to Raspberry Pi |
+| `make install` | Copy systemd timer/service to Pi and enable |
+
+### CLI flags
+
+| Flag | Description |
+|---|---|
+| `--dry-run` | Save to PNG instead of writing to display |
+| `--dummy` | Use built-in dummy data (no API calls needed) |
+| `--config PATH` | Config file path (default: `config/config.yaml`) |
+| `--force-full-refresh` | Force full eInk refresh; bypasses fetch intervals and circuit breaker |
+| `--check-config` | Validate config and exit |
+
+### Offline development
+
+```bash
+venv/bin/python -m src.main --dry-run --dummy
+```
+
+No API keys, credentials, or hardware needed. Renders to `output/latest.png`.
+
+### Linting
+
+```bash
+flake8 src/ tests/ --max-line-length=100
 ```
 
 ---
@@ -568,29 +553,55 @@ cache:
 ```
 Dashboard-v3/
 ├── config/
-│   ├── config.example.yaml   # Copy to config.yaml and fill in secrets
-│   └── quotes.json           # Daily quote pool (edit to customise)
-├── credentials/              # Google service account JSON (git-ignored)
-├── fonts/                    # Bundled TTF fonts
-├── output/                   # Dry-run PNGs and cache (mostly git-ignored)
+│   ├── config.example.yaml       # Configuration template
+│   └── quotes.json               # Daily quote pool (125 entries)
+├── credentials/                  # Git-ignored -- Google service account JSON
+├── deploy/
+│   ├── dashboard.service         # Systemd service unit
+│   └── dashboard.timer           # Systemd timer (fires every 30 min)
+├── fonts/                        # Bundled TTF fonts
+├── output/                       # Mostly git-ignored
+│   └── latest.png                # Latest dry-run preview (tracked)
 ├── src/
-│   ├── main.py               # Entry point + fetcher orchestration
-│   ├── config.py             # YAML → typed config dataclass
-│   ├── filters.py            # Event filtering
-│   ├── data/models.py        # Pure data model dataclasses
-│   ├── display/              # Display drivers (DryRun + Waveshare) + conditional refresh
-│   ├── fetchers/             # API integrations, cache, circuit breaker, quota tracker
+│   ├── main.py                   # CLI entry point + fetcher orchestration
+│   ├── config.py                 # YAML -> typed Config dataclass + validation
+│   ├── filters.py                # Event filtering (calendar, keyword, all-day)
+│   ├── data/
+│   │   └── models.py             # Pure dataclasses (no I/O)
+│   ├── display/
+│   │   ├── driver.py             # DisplayDriver ABC, DryRunDisplay, WaveshareDisplay
+│   │   └── refresh_tracker.py    # Partial vs full refresh state
+│   ├── fetchers/
+│   │   ├── calendar.py           # Google Calendar + incremental sync + birthdays
+│   │   ├── weather.py            # OpenWeatherMap (current + forecast + alerts + UV)
+│   │   ├── cache.py              # Per-source JSON cache with TTL staleness
+│   │   ├── circuit_breaker.py    # Per-source circuit breaker
+│   │   └── quota_tracker.py      # Daily API call counter
 │   └── render/
-│       ├── canvas.py         # Top-level render orchestrator (theme-driven)
-│       ├── layout.py         # Default pixel geometry constants
-│       ├── theme.py          # Theme system: ComponentRegion, ThemeLayout, ThemeStyle
-│       ├── themes/           # Built-in theme factories (cyberpunk, minimalist, old_fashioned)
-│       ├── moon.py           # Pure-math moon phase
-│       └── components/       # header, week_view, weather_panel, birthday_bar, info_panel
-├── tests/                    # pytest suite (591 tests)
+│       ├── canvas.py             # Top-level render orchestrator (theme-driven)
+│       ├── theme.py              # Theme system (ComponentRegion, ThemeLayout, ThemeStyle)
+│       ├── layout.py             # Default pixel geometry constants
+│       ├── fonts.py              # Font loader with @lru_cache
+│       ├── icons.py              # OWM icon code -> Weather Icons glyph
+│       ├── moon.py               # Pure-math moon phase calculator
+│       ├── primitives.py         # Shared draw helpers (truncation, wrapping)
+│       ├── themes/               # Built-in theme factories
+│       │   ├── cyberpunk.py
+│       │   ├── minimalist.py
+│       │   ├── old_fashioned.py
+│       │   ├── today.py
+│       │   └── dnd_fantasy.py
+│       └── components/           # One file per UI region
+│           ├── header.py
+│           ├── week_view.py
+│           ├── weather_panel.py
+│           ├── birthday_bar.py
+│           ├── today_view.py
+│           └── info_panel.py
+├── tests/                        # 25 test files, 591 tests
 ├── Makefile
-├── requirements.txt
-└── requirements-pi.txt
+├── requirements.txt              # Core dependencies
+└── requirements-pi.txt           # Raspberry Pi hardware dependencies
 ```
 
 ---
@@ -599,21 +610,29 @@ Dashboard-v3/
 
 | Font | Used for |
 |---|---|
-| [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) (Regular, Medium, SemiBold, Bold) | Default UI text — header, labels, timestamps, event titles, weather details, quote |
-| [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather condition icons and moon phase glyphs |
-| [Cinzel](https://fonts.google.com/specimen/Cinzel) (variable, 400–900) | `dnd_fantasy` theme — Roman inscription caps for headers and section labels |
-| [DM Sans](https://fonts.google.com/specimen/DM+Sans) (variable) | `minimalist` theme — screen-optimised geometric sans |
-| [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) | `cyberpunk` theme — monospace terminal font |
-| [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | `old_fashioned` theme — newspaper broadsheet serif |
+| [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) | Default UI text (all themes) |
+| [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather condition icons + moon phase glyphs |
+| [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) | `cyberpunk` theme |
+| [DM Sans](https://fonts.google.com/specimen/DM+Sans) | `minimalist` theme |
+| [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | `old_fashioned` theme |
+| [Cinzel](https://fonts.google.com/specimen/Cinzel) | `dnd_fantasy` theme |
 
-Custom fonts can be added per-theme via `ThemeStyle.font_*` callables — see [Creating your own theme](#creating-your-own-theme).
+Custom fonts can be added per-theme via `ThemeStyle` font callables -- see
+[Creating your own theme](#creating-your-own-theme) and [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
 ## Dependencies
 
-- [Pillow](https://pillow.readthedocs.io/) — image rendering
-- [google-api-python-client](https://googleapis.github.io/google-api-python-client/) — Google Calendar & Contacts
-- [requests](https://requests.readthedocs.io/) — OpenWeatherMap API
-- [PyYAML](https://pyyaml.org/) — configuration
-- [RPi.GPIO](https://pypi.org/project/RPi.GPIO/) + [spidev](https://pypi.org/project/spidev/) — Raspberry Pi hardware (Pi only)
+### Core (all platforms)
+
+- [Pillow](https://pillow.readthedocs.io/) -- image rendering
+- [google-api-python-client](https://googleapis.github.io/google-api-python-client/) -- Google Calendar and Contacts APIs
+- [google-auth](https://google-auth.readthedocs.io/) -- service account authentication
+- [requests](https://requests.readthedocs.io/) -- OpenWeatherMap API
+- [PyYAML](https://pyyaml.org/) -- configuration parsing
+
+### Raspberry Pi only
+
+- [RPi.GPIO](https://pypi.org/project/RPi.GPIO/) -- GPIO pin control
+- [spidev](https://pypi.org/project/spidev/) -- SPI communication with display
