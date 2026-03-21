@@ -337,11 +337,10 @@ Key functions in `week_view.py`:
 ### Extended Weather Forecast
 
 `fetchers/weather.py` now returns up to **6 days** of forecast data (was 3) from the OWM
-5-day/3-hour endpoint. The weather panel bottom strip still shows up to 3 forecast columns
-(fewer when alerts are present — see Weather Alerts above), but **small forecast icons are
-rendered in week-view column headers** for all days that have forecast data. `draw_week()`
-accepts an optional `forecast: list[DayForecast]` parameter; `canvas.py` passes
-`data.weather.forecast` through.
+5-day/3-hour endpoint. The weather panel bottom strip shows up to 3 forecast columns
+(fewer when alerts are present — see Weather Alerts above). `draw_week()` accepts an
+optional `forecast: list[DayForecast]` parameter (passed through from `canvas.py`) but
+does not currently render it — the parameter is retained for API compatibility.
 
 Each forecast column in the strip shows a weather icon (18px), the abbreviated day name
 (`semibold(11)`), the high/low temps (`regular(11)`), and — when `DayForecast.precip_chance
@@ -750,7 +749,7 @@ Twenty-four test files live in `tests/` (578 tests total):
 | `test_fonts.py` | All font accessor functions in `render/fonts.py`, variable font axis selection, lru_cache behaviour |
 | `test_header.py` | `draw_header()` — all staleness levels (FRESH/AGING/STALE/EXPIRED), cached indicator, severity ordering, custom title |
 | `test_v2_features.py` | v2 features: alerts, busy dots, location display, per-source cache, incremental sync |
-| `test_v3_features.py` | v3 features: image diffing, parallel fetchers, moon phase, spanning events, forecast icons, full pipeline |
+| `test_v3_features.py` | v3 features: image diffing, parallel fetchers, moon phase, spanning events, full pipeline |
 | `test_filters.py` | Event filtering: each filter type, case insensitivity, combined filters, None calendar_name, empty list |
 | `test_circuit_breaker.py` | Circuit breaker state transitions: closed→open→half_open→closed, half-open probe paths, cooldown edge cases, persistence |
 | `test_quota_tracker.py` | Quota tracker: daily count, auto-reset on new day, warning threshold, persistence, corrupted state, live-instance day rollover |

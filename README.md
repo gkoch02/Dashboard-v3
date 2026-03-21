@@ -71,11 +71,10 @@ The canvas is **black** with white text throughout. All headers and section labe
 [Cinzel](https://fonts.google.com/specimen/Cinzel) — a Roman stone-inscription typeface
 identical in spirit to D&D chapter headings — while event body text stays in Plus Jakarta
 Sans for legibility at small sizes. Every panel is sealed inside an ornamental
-double-frame border with nested-diamond corner pieces; crossed sword glyphs flank the
-title in the header; a triple vertical rule with three diamond ornaments divides the
-sidebar from the calendar; and double horizontal rules with centrepiece diamonds separate
-the sidebar panels. Section labels read **THE ORACLE'S OMEN**, **THE FELLOWSHIP**, and
-**ANCIENT WISDOM**.
+double-frame border with nested-diamond corner pieces; a triple vertical rule with three
+diamond ornaments divides the sidebar from the calendar; and double horizontal rules with
+centrepiece diamonds separate the sidebar panels. Section labels read **THE ORACLE'S
+OMEN**, **THE FELLOWSHIP**, and **ANCIENT WISDOM**.
 
 ![D&D Fantasy theme](output/theme_dnd_fantasy.png)
 
@@ -182,8 +181,8 @@ For full details see the **Theme System** section in [`CLAUDE.md`](CLAUDE.md).
 ### Display & Rendering
 
 - **Weekly calendar view** — 7-day grid (Mon–Sun) with timed and all-day events from
-  Google Calendar; event locations shown below each title; per-day busy-ness dots and
-  forecast icons in column headers
+  Google Calendar; event locations shown below each title; per-day busy-ness dots in
+  column headers
 - **Multi-day spanning events** — all-day events spanning multiple days render as
   continuous bars across columns rather than repeated per-day
 - **Adaptive event density** — automatically switches between normal, compact, and dense
@@ -192,8 +191,7 @@ For full details see the **Theme System** section in [`CLAUDE.md`](CLAUDE.md).
 - **Weather panel** — current conditions, high/low, wind speed with compass direction,
   UV index, 3-day forecast strip, active weather alerts, and moon phase icon via
   OpenWeatherMap
-- **Extended forecast** — up to 6 days of forecast data; small weather icons appear in
-  each week-view day header for a unified week-at-a-glance
+- **Extended forecast** — up to 6 days of forecast data displayed in the weather panel forecast strip
 - **Moon phase** — pure-math lunar phase calculation (no API needed)
 - **Birthdays** — upcoming birthdays from a local JSON file, Google Calendar, or Google
   Contacts with countdown and milestone age display
