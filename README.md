@@ -181,12 +181,11 @@ For full details see the **Theme System** section in [`CLAUDE.md`](CLAUDE.md).
 ### Display & Rendering
 
 - **Weekly calendar view** — 7-day grid (Mon–Sun) with timed and all-day events from
-  Google Calendar; event locations shown below each title; per-day busy-ness dots in
-  column headers
+  Google Calendar; event locations shown below each title
 - **Multi-day spanning events** — all-day events spanning multiple days render as
   continuous bars across columns rather than repeated per-day
 - **Adaptive event density** — automatically switches between normal, compact, and dense
-  rendering tiers based on event count; busy days use smaller fonts and tighter spacing
+  rendering tiers based on event count, using smaller fonts and tighter spacing
   to fit more events before showing "+N more"
 - **Weather panel** — current conditions, high/low, wind speed with compass direction,
   UV index, 3-day forecast strip, active weather alerts, and moon phase icon via
@@ -588,7 +587,7 @@ Dashboard-v3/
 │       ├── themes/           # Built-in theme factories (cyberpunk, minimalist, old_fashioned)
 │       ├── moon.py           # Pure-math moon phase
 │       └── components/       # header, week_view, weather_panel, birthday_bar, info_panel
-├── tests/                    # pytest suite (578 tests)
+├── tests/                    # pytest suite (591 tests)
 ├── Makefile
 ├── requirements.txt
 └── requirements-pi.txt

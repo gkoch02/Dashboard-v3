@@ -726,7 +726,7 @@ Wilde, Twain, and others. Each entry is `{"text": "...", "author": "..."}`.
 make test          # pytest tests/ -v
 ```
 
-Twenty-four test files live in `tests/` (578 tests total):
+Twenty-four test files live in `tests/` (591 tests total):
 
 | File | What it covers |
 |---|---|
@@ -748,7 +748,7 @@ Twenty-four test files live in `tests/` (578 tests total):
 | `test_weather_panel.py` | `draw_weather()` — all branch paths: alerts, forecasts, precip, sunrise/sunset, wind compass, UV index |
 | `test_fonts.py` | All font accessor functions in `render/fonts.py`, variable font axis selection, lru_cache behaviour |
 | `test_header.py` | `draw_header()` — all staleness levels (FRESH/AGING/STALE/EXPIRED), cached indicator, severity ordering, custom title |
-| `test_v2_features.py` | v2 features: alerts, busy dots, location display, per-source cache, incremental sync |
+| `test_v2_features.py` | v2 features: alerts, location display, per-source cache, incremental sync |
 | `test_v3_features.py` | v3 features: image diffing, parallel fetchers, moon phase, spanning events, full pipeline |
 | `test_filters.py` | Event filtering: each filter type, case insensitivity, combined filters, None calendar_name, empty list |
 | `test_circuit_breaker.py` | Circuit breaker state transitions: closed→open→half_open→closed, half-open probe paths, cooldown edge cases, persistence |
