@@ -166,24 +166,69 @@ def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
             start=_at(4, 14), end=_at(4, 15),
             location="Main Auditorium",
         ),
-        # Saturday (col 5) — Normal weekend (1 event, threshold ≤2)
+        # Friday (col 4) — extra events
+        CalendarEvent(
+            summary="Weekly Wrap-up",
+            start=_at(4, 9), end=_at(4, 9, 30),
+        ),
+        CalendarEvent(
+            summary="Lunch & Learn",
+            start=_at(4, 12), end=_at(4, 13),
+            location="Rooftop Lounge",
+        ),
+        # Saturday (col 5) — Normal weekend
         CalendarEvent(
             summary="Farmers Market",
             start=_at(5, 9), end=_at(5, 11),
         ),
-        # Sunday (col 6) — Compact weekend (3 events, threshold 3–4)
+        CalendarEvent(
+            summary="Bike Ride",
+            start=_at(5, 12), end=_at(5, 14),
+            location="Golden Gate Park",
+        ),
+        CalendarEvent(
+            summary="Dinner Party",
+            start=_at(5, 19), end=_at(5, 22),
+            location="Chris & Dana's",
+        ),
+        # Sunday (col 6) — Dense day for today/old_fashioned themes
+        CalendarEvent(
+            summary="Weekend",
+            start=datetime.combine(week_start + timedelta(days=6), datetime.min.time()),
+            end=datetime.combine(week_start + timedelta(days=7), datetime.min.time()),
+            is_all_day=True,
+        ),
+        CalendarEvent(
+            summary="Morning Run",
+            start=_at(6, 7, 30), end=_at(6, 8, 15),
+            location="Embarcadero",
+        ),
         CalendarEvent(
             summary="Brunch",
             start=_at(6, 10), end=_at(6, 12),
             location="The Griddle Cafe",
         ),
         CalendarEvent(
+            summary="Museum Visit",
+            start=_at(6, 13), end=_at(6, 15, 30),
+            location="SFMOMA",
+        ),
+        CalendarEvent(
             summary="Grocery Run",
-            start=_at(6, 14), end=_at(6, 15),
+            start=_at(6, 16), end=_at(6, 17),
+        ),
+        CalendarEvent(
+            summary="Meal Prep",
+            start=_at(6, 17), end=_at(6, 18, 30),
+            location="Home",
         ),
         CalendarEvent(
             summary="Family Call",
-            start=_at(6, 17), end=_at(6, 17, 30),
+            start=_at(6, 19), end=_at(6, 19, 30),
+        ),
+        CalendarEvent(
+            summary="Read & Wind Down",
+            start=_at(6, 20, 30), end=_at(6, 22),
         ),
     ]
 
