@@ -151,7 +151,7 @@ class Theme:
 # ---------------------------------------------------------------------------
 
 AVAILABLE_THEMES: frozenset[str] = frozenset(
-    {"default", "terminal", "minimalist", "old_fashioned", "today", "fantasy", "qotd"}
+    {"default", "terminal", "minimalist", "old_fashioned", "today", "fantasy", "qotd", "random"}
 )
 
 
@@ -186,6 +186,10 @@ def load_theme(name: str) -> Theme:
     """Return a Theme for the given name.
 
     Raises ``ValueError`` for unknown names.
+
+    Note: ``"random"`` is not handled here — it must be resolved to a concrete
+    theme name via ``src.render.random_theme.pick_random_theme`` before calling
+    this function (see ``main.py``).
     """
     if name == "default":
         return default_theme()

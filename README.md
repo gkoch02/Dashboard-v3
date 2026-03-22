@@ -143,6 +143,7 @@ Your existing config is fully compatible. These are opt-in additions:
 | Feature | How to enable |
 |---|---|
 | **Themes** (7 built-in layouts) | Add `theme: terminal` (or `minimalist`, `old_fashioned`, `today`, `fantasy`, `qotd`) to `config.yaml` |
+| **Random daily theme rotation** | Set `theme: random`; optionally add a `random_theme:` block to include/exclude specific themes |
 | **Event filtering** | Add a `filters:` block — hide events by calendar name, keyword, or all-day status |
 | **Configurable cache TTLs** | Add a `cache:` block to tune per-source TTL and fetch intervals |
 | **Circuit breaker tuning** | `cache.max_failures` and `cache.cooldown_minutes` |
@@ -251,11 +252,49 @@ birthdays:
 Switch the entire dashboard layout and visual style with one line:
 
 ```yaml
-theme: terminal   # default | terminal | minimalist | old_fashioned | today | fantasy | qotd
+theme: terminal   # default | terminal | minimalist | old_fashioned | today | fantasy | qotd | random
 ```
 
 Themes control component positions, proportions, fonts, and visual style -- not just
 colors. Each theme can hide sections, rearrange panels, or use entirely different fonts.
+
+### Random daily rotation
+
+Set `theme: random` to automatically pick a different theme each day:
+
+```yaml
+theme: random
+```
+
+A theme is chosen once per day on the first refresh after midnight and reused for every
+subsequent refresh that day. The selection is persisted to
+`output/random_theme_state.json` so restarts mid-day do not re-roll the theme.
+
+Use `random_theme` to control which themes are in the rotation:
+
+```yaml
+theme: random
+random_theme:
+  include: []          # allowlist — only these themes rotate (empty = all themes)
+  exclude: []          # denylist — never use these themes
+```
+
+**Examples:**
+
+```yaml
+# Only rotate among calm, readable themes
+random_theme:
+  include: ["default", "minimalist", "terminal"]
+
+# Rotate everything except the full-screen quote theme
+random_theme:
+  exclude: ["qotd"]
+```
+
+- `include` is applied first; `exclude` is applied after.
+- If both are empty, all 7 themes are eligible.
+- If the pool is empty after filtering, the dashboard falls back to `"default"`.
+- Run `make check` to catch invalid theme names in either list.
 
 ### Built-in themes
 
@@ -519,7 +558,11 @@ schedule:
 
 timezone: "local"                  # IANA name or "local"
 title: "Home Dashboard"            # text shown in the header bar
-theme: "default"                   # default | terminal | minimalist | old_fashioned | today | fantasy | qotd
+theme: "default"                   # default | terminal | minimalist | old_fashioned | today | fantasy | qotd | random
+
+random_theme:                      # only used when theme: random
+  include: []                      # allowlist (empty = all themes eligible)
+  exclude: []                      # denylist (e.g. ["fantasy", "qotd"])
 
 cache:
   weather_ttl_minutes: 60          # data older than 4x TTL is discarded
@@ -675,6 +718,7 @@ Dashboard-v3/
 │   └── render/
 │       ├── canvas.py             # Top-level render orchestrator (theme-driven)
 │       ├── theme.py              # Theme system (ComponentRegion, ThemeLayout, ThemeStyle)
+│       ├── random_theme.py       # Daily random theme selection + persistence
 │       ├── layout.py             # Default pixel geometry constants
 │       ├── fonts.py              # Font loader with @lru_cache
 │       ├── icons.py              # OWM icon code -> Weather Icons glyph

@@ -8,7 +8,7 @@ Python eInk dashboard for Raspberry Pi. Displays a weekly calendar (Google Calen
 
 ```bash
 make setup          # Create venv, install deps, copy config template
-make test           # Run pytest (591 tests across 25 files)
+make test           # Run pytest (609 tests across 26 files)
 make dry            # Preview with dummy data → output/latest.png
 make check          # Validate config/config.yaml
 make deploy         # Rsync to Pi
@@ -45,20 +45,21 @@ src/
 │   └── quota_tracker.py       # Daily API call counter
 └── render/
     ├── canvas.py              # Top-level render orchestrator (dispatches to components by theme)
-    ├── theme.py               # Theme system (ComponentRegion, ThemeLayout, ThemeStyle)
+    ├── theme.py               # Theme system (ComponentRegion, ThemeLayout, ThemeStyle); AVAILABLE_THEMES
+    ├── random_theme.py        # Daily random theme selection + persistence (output/random_theme_state.json)
     ├── layout.py              # Default layout constants
     ├── fonts.py               # Font loader (@lru_cache)
     ├── icons.py               # OWM icon code → Weather Icons glyph
     ├── moon.py                # Moon phase calculator
     ├── primitives.py          # Shared draw utilities (truncation, wrapping, colors)
-    ├── themes/                # 6 themes: default, terminal, minimalist, old_fashioned, today, fantasy
+    ├── themes/                # 7 themes: default, terminal, minimalist, old_fashioned, today, fantasy, qotd
     └── components/            # One file per UI region (header, week_view, weather_panel, birthday_bar, today_view, info_panel)
 
 config/
 ├── config.example.yaml        # Template (copy to config.yaml)
 └── quotes.json                # Bundled daily quotes
 
-tests/                         # 25 test files, extensive mocking
+tests/                         # 26 test files, extensive mocking
 fonts/                         # Bundled TTF fonts
 deploy/                        # Systemd service + timer
 output/                        # Generated PNGs + cache files (git-ignored except latest.png)
@@ -73,8 +74,10 @@ Fetchers, caching, circuit breaking, and staleness are all per-source (calendar,
 ### Theme system
 Three-layer design: **ComponentRegion** (bounding box) → **ThemeLayout** (canvas + regions + draw order) → **ThemeStyle** (colors, fonts, spacing). Components receive region + style and draw only within bounds. Themes are frozen dataclasses.
 
+Setting `theme: random` activates daily rotation: `random_theme.py` picks one theme from the eligible pool on the first run after midnight, persists it to `output/random_theme_state.json`, and reuses it for the rest of the day. The concrete theme name is resolved in `main.py` before `load_theme()` is called — `load_theme()` itself never receives `"random"`.
+
 ### Data flow
-`main.py`: parse args → load config → check quiet hours → fetch data (with cache/circuit breaker) → filter events → load theme → render → compare hash → write display → save cache.
+`main.py`: parse args → load config → check quiet hours → fetch data (with cache/circuit breaker) → filter events → resolve theme (random → concrete name) → load theme → render → compare hash → write display → save cache.
 
 ### Rendering
 Components are pure functions: `draw_*(draw, data, region, style) -> None`. No global state. Same input produces the same PNG.
@@ -102,7 +105,7 @@ Components are pure functions: `draw_*(draw, data, region, style) -> None`. No g
 
 **New component**: Create `src/render/components/my_component.py` → implement `draw_my_component(draw, data, region, style)` → add `ComponentRegion` to themes → register in `canvas.py` draw dispatch → add to theme `draw_order`.
 
-**New theme**: Create `src/render/themes/my_theme.py` → implement `my_theme() -> Theme` factory → register in `load_theme()` in `theme.py`.
+**New theme**: Create `src/render/themes/my_theme.py` → implement `my_theme() -> Theme` factory → register in `load_theme()` in `theme.py` → add name to `AVAILABLE_THEMES`. New themes are automatically included in the `random` rotation pool.
 
 **New fetcher**: Create `src/fetchers/my_fetcher.py` → use `cache.py` and `circuit_breaker.py` → integrate into `main.py` orchestration → extend `DashboardData` if needed.
 
@@ -115,3 +118,4 @@ Components are pure functions: `draw_*(draw, data, region, style) -> None`. No g
 - eInk partial refreshes degrade quality; full refresh forced after `max_partials_before_full` partials
 - Default canvas: 800×480; scaled via LANCZOS to match display resolution
 - Image hash comparison (`last_image_hash.txt`) skips eInk writes when content unchanged
+- Random theme state persists in `output/random_theme_state.json`; delete it to force a new theme pick mid-day

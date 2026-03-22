@@ -561,9 +561,20 @@ def main():
         data.events = filter_events(data.events, cfg.filters)
         logger.info("Filtered events: %d -> %d", original_count, len(data.events))
 
+    # Resolve "random" to a concrete theme name for today
+    theme_name = cfg.theme
+    if theme_name == "random":
+        from src.render.random_theme import pick_random_theme
+        theme_name = pick_random_theme(
+            include=cfg.random_theme.include,
+            exclude=cfg.random_theme.exclude,
+            output_dir=cfg.output_dir,
+        )
+        logger.info("Random theme resolved to: %s", theme_name)
+
     # Render
     logger.info("Rendering dashboard")
-    theme = load_theme(cfg.theme)
+    theme = load_theme(theme_name)
     image = render_dashboard(data, cfg.display, title=cfg.title, theme=theme)
 
     # Conditional refresh — skip display update when the image hasn't changed.

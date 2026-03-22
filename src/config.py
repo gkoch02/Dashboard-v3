@@ -75,6 +75,17 @@ class FilterConfig:
 
 
 @dataclass
+class RandomThemeConfig:
+    """Controls which themes are eligible when ``theme: random`` is configured.
+
+    - ``include``: if non-empty, only these themes are candidates.
+    - ``exclude``: themes to always skip (applied after include).
+    """
+    include: list[str] = field(default_factory=list)
+    exclude: list[str] = field(default_factory=list)
+
+
+@dataclass
 class Config:
     google: GoogleConfig = field(default_factory=GoogleConfig)
     weather: WeatherConfig = field(default_factory=WeatherConfig)
@@ -83,6 +94,7 @@ class Config:
     schedule: ScheduleConfig = field(default_factory=ScheduleConfig)
     filters: FilterConfig = field(default_factory=FilterConfig)
     cache: CacheConfig = field(default_factory=CacheConfig)
+    random_theme: RandomThemeConfig = field(default_factory=RandomThemeConfig)
     title: str = "Home Dashboard"
     theme: str = "default"
     output_dir: str = "output"
@@ -183,6 +195,13 @@ def load_config(path: str = "config/config.yaml") -> Config:
             exclude_calendars=fl.get("exclude_calendars", []),
             exclude_keywords=fl.get("exclude_keywords", []),
             exclude_all_day=fl.get("exclude_all_day", False),
+        )
+
+    if "random_theme" in raw:
+        rt = raw["random_theme"]
+        cfg.random_theme = RandomThemeConfig(
+            include=rt.get("include", []),
+            exclude=rt.get("exclude", []),
         )
 
     if "output" in raw:
@@ -299,6 +318,28 @@ def validate_config(
             message=f"Unknown theme: '{cfg.theme}'",
             hint=f"Available themes: {', '.join(sorted(AVAILABLE_THEMES))}",
         ))
+
+    if cfg.theme == "random":
+        real_themes = AVAILABLE_THEMES - {"random"}
+        for label, lst in [
+            ("random_theme.include", cfg.random_theme.include),
+            ("random_theme.exclude", cfg.random_theme.exclude),
+        ]:
+            invalid = set(lst) - real_themes
+            if invalid:
+                warnings.append(ConfigWarning(
+                    field=label,
+                    message=f"Unknown theme(s): {', '.join(sorted(invalid))}",
+                    hint=f"Available themes: {', '.join(sorted(real_themes))}",
+                ))
+        from src.render.random_theme import eligible_themes
+        pool = eligible_themes(cfg.random_theme.include, cfg.random_theme.exclude)
+        if not pool:
+            warnings.append(ConfigWarning(
+                field="random_theme",
+                message="Random theme pool is empty — all themes have been excluded.",
+                hint="Check your include/exclude lists; the dashboard will fall back to 'default'.",
+            ))
 
     # --- Display model ---
     from src.display.driver import WAVESHARE_MODELS
