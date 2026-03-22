@@ -100,6 +100,14 @@ class ThemeStyle:
     font_medium: FontCallable | None = None
     font_semibold: FontCallable | None = None
     font_bold: FontCallable | None = None
+    # Optional overrides for specific large display elements in the week view.
+    # Falls back to font_bold when None.
+    font_date_number: FontCallable | None = None  # large today date numeral
+    font_month_title: FontCallable | None = None  # large month name band
+    font_title: FontCallable | None = None  # dashboard title + day column headers
+    font_section_label: FontCallable | None = None  # WEATHER / BIRTHDAYS / QUOTE OF THE DAY
+    font_quote: FontCallable | None = None   # quote body text
+    font_quote_author: FontCallable | None = None  # quote attribution line
 
     # Event spacing multiplier (applied in _fonts_for_tier)
     spacing_scale: float = 1.0
@@ -134,6 +142,8 @@ class ThemeStyle:
 
     def label_font(self) -> "ImageFont.FreeTypeFont":
         """Return the appropriate font for section labels based on label_font_weight."""
+        if self.font_section_label is not None:
+            return self.font_section_label(self.label_font_size)  # type: ignore[misc]
         fn = {
             "bold": self.font_bold,
             "semibold": self.font_semibold,
