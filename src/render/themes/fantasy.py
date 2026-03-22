@@ -45,6 +45,12 @@ _WEATHER_H = 180        # oracle's omen — weather
 _BIRTHDAY_H = 130       # the fellowship — birthdays
 _INFO_H = _BODY_H - _WEATHER_H - _BIRTHDAY_H  # ancient wisdom — quote
 
+# The ornamental double-frame uses an inner border at inset 6 and an outer
+# border at inset 2.  Component regions are inset by one extra pixel so that
+# solid-filled rectangles (inverted header, alert bars, month band, today
+# column) never reach the frame band and visually overwrite the border lines.
+_CI = 7   # content inset — one pixel inside the inner border (INNER=6)
+
 
 # ---------------------------------------------------------------------------
 # Ornamental drawing helpers
@@ -96,6 +102,16 @@ def _draw_fantasy_overlay(
     # ------------------------------------------------------------------
     OUTER = 2   # outer border inset from canvas edge
     INNER = 6   # inner accent line inset
+
+    # Clear the entire frame band to bg before drawing borders.  Component
+    # fills (inverted header, alert columns, month band, today column) may
+    # have painted white over the black gap between the two border lines,
+    # making the double-frame effect invisible.  Resetting those strips here
+    # ensures the gap is always bg (black) regardless of component content.
+    draw.rectangle([OUTER, OUTER, W - OUTER - 1, INNER], fill=bg)           # top strip
+    draw.rectangle([OUTER, H - INNER - 1, W - OUTER - 1, H - OUTER - 1], fill=bg)  # bottom
+    draw.rectangle([OUTER, OUTER, INNER, H - OUTER - 1], fill=bg)           # left strip
+    draw.rectangle([W - INNER - 1, OUTER, W - OUTER - 1, H - OUTER - 1], fill=bg)  # right
 
     draw.rectangle([OUTER, OUTER, W - OUTER - 1, H - OUTER - 1], outline=fg, width=2)
     draw.rectangle([INNER, INNER, W - INNER - 1, H - INNER - 1], outline=fg, width=1)
@@ -180,13 +196,14 @@ def fantasy_theme() -> Theme:
     layout = ThemeLayout(
         canvas_w=_CANVAS_W,
         canvas_h=_CANVAS_H,
-        header=ComponentRegion(0, 0, _CANVAS_W, _HEADER_H),
-        # Week view fills the right 585px × full body height — the "quest log"
-        week_view=ComponentRegion(_QUEST_X, _BODY_Y, _QUEST_W, _BODY_H),
-        # Sidebar panels stacked on the left (the "arcane tower")
-        weather=ComponentRegion(0, _BODY_Y, _SIDEBAR_W, _WEATHER_H),
-        birthdays=ComponentRegion(0, _BODY_Y + _WEATHER_H, _SIDEBAR_W, _BIRTHDAY_H),
-        info=ComponentRegion(0, _BODY_Y + _WEATHER_H + _BIRTHDAY_H, _SIDEBAR_W, _INFO_H),
+        # Inset all regions by _CI so solid-filled boxes end before the frame band.
+        header=ComponentRegion(_CI, _CI, _CANVAS_W - 2 * _CI, _HEADER_H - _CI),
+        # Week view — "quest log" on the right; inset from right canvas edge only
+        week_view=ComponentRegion(_QUEST_X, _BODY_Y, _CANVAS_W - _QUEST_X - _CI, _BODY_H),
+        # Sidebar panels stacked on the left (the "arcane tower"); inset from left edge
+        weather=ComponentRegion(_CI, _BODY_Y, _SIDEBAR_W - _CI, _WEATHER_H),
+        birthdays=ComponentRegion(_CI, _BODY_Y + _WEATHER_H, _SIDEBAR_W - _CI, _BIRTHDAY_H),
+        info=ComponentRegion(_CI, _BODY_Y + _WEATHER_H + _BIRTHDAY_H, _SIDEBAR_W - _CI, _INFO_H),
         today_view=ComponentRegion(0, 0, 0, 0, visible=False),
         draw_order=["header", "weather", "birthdays", "info", "week_view"],
         overlay_fn=_draw_fantasy_overlay,
