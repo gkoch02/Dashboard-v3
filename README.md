@@ -140,26 +140,32 @@ event bars. 7-day calendar grid with weather/birthdays/quote along the bottom.
 
 #### terminal
 
-Inverted canvas: **black background** with white text. Uses Share Tech Mono for a terminal
-aesthetic. Tighter event spacing. Today's column pops as a white-fill/black-text block.
+Inverted canvas: **black background** with white text. Uses Share Tech Mono for a consistent
+monospace aesthetic across all text. Compact 34px header. Tighter event spacing
+(0.85× scale). Today's column and all-day event bars both pop as white-fill/black-text blocks.
 
 ![Terminal theme](output/theme_terminal.png)
 
 #### minimalist
 
-Bauhaus editorial: form follows function. The week grid dominates at 374px — 54px more
-than default. Today's column header is a solid black block (not a soft underline). All-day
-bars are filled black. Events pack to a tight 1.0× grid. An asymmetric bottom strip puts
-weather at 500px and the quote at 300px. Section labels drop to 8pt regular so data leads.
-A 2px left-margin rule and 2px bottom rail frame the canvas. DM Sans font. Birthdays
-panel hidden.
+Bauhaus editorial: form follows function. Ultra-slim 22px header with no fill or border.
+The week grid dominates at 358px. Today's column is marked with a subtle outline (no fill).
+All-day event bars are outlined, not filled. Events pack to a tight 1.0× grid. A 100px
+bottom strip splits asymmetrically: weather at 500px, quote at 300px (labelled with a
+single em dash). Section labels are 8pt regular — data leads. No structural borders or
+separator lines. DM Sans font. Birthdays panel hidden.
 
 ![Minimalist theme](output/theme_minimalist.png)
 
 #### old_fashioned
 
-Newspaper-style layout: a single-day view on the left with Playfair Display serif font,
-weather/birthdays/quote stacked vertically on the right. Taller 56px header.
+Victorian broadsheet layout. A 70px inverted masthead with white corner-bracket ornaments
+and a thin inner frame rule. A triple-rule band separates the masthead from the body. The
+left column (490px) shows today's schedule with Playfair Display serif body text. The right
+sidebar (310px) stacks three panels — **The Weather**, **Social Notices**, and **Words of
+Wisdom** — divided by double horizontal rules with diamond dingbats. A double vertical
+column rule with a centre diamond separates the two columns. Cinzel Black Roman caps for
+section labels. Double-rule bottom border.
 
 ![Old Fashioned theme](output/theme_old_fashioned.png)
 
@@ -173,9 +179,13 @@ desk display.
 
 #### fantasy
 
-D&D-inspired aesthetic. Black canvas with Cinzel stone-inscription headers. A 215px sidebar
-("Arcane Tower") stacks weather, birthdays, and quote. The "Quest Log" calendar fills the
-right side. Ornamental double-frame borders with diamond corner pieces.
+D&D-inspired aesthetic. Black canvas with Cinzel Bold headers and sword-glyph accents in
+the masthead. A 240px left sidebar ("Arcane Tower") stacks three panels — **The Oracle's
+Omen** (weather), **The Fellowship** (birthdays), and **Ancient Wisdom** (quote). The
+**Quest Log** (week view) fills the right 560px. A thick ornamental double-frame border runs
+the full canvas, with concentric diamond corner ornaments at every inner-frame corner.
+Triple-line vertical divider between sidebar and quest log with diamond ticks at 1/3, 1/2,
+and 2/3 of the body height. Plus Jakarta Sans for event body text.
 
 ![Fantasy theme](output/theme_fantasy.png)
 
