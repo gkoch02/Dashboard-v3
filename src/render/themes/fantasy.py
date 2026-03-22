@@ -97,6 +97,16 @@ def _draw_fantasy_overlay(
     OUTER = 2   # outer border inset from canvas edge
     INNER = 6   # inner accent line inset
 
+    # Clear the entire frame band to bg before drawing borders.  Component
+    # fills (inverted header, alert columns, month band, today column) may
+    # have painted white over the black gap between the two border lines,
+    # making the double-frame effect invisible.  Resetting those strips here
+    # ensures the gap is always bg (black) regardless of component content.
+    draw.rectangle([OUTER, OUTER, W - OUTER - 1, INNER], fill=bg)           # top strip
+    draw.rectangle([OUTER, H - INNER - 1, W - OUTER - 1, H - OUTER - 1], fill=bg)  # bottom
+    draw.rectangle([OUTER, OUTER, INNER, H - OUTER - 1], fill=bg)           # left strip
+    draw.rectangle([W - INNER - 1, OUTER, W - OUTER - 1, H - OUTER - 1], fill=bg)  # right
+
     draw.rectangle([OUTER, OUTER, W - OUTER - 1, H - OUTER - 1], outline=fg, width=2)
     draw.rectangle([INNER, INNER, W - INNER - 1, H - INNER - 1], outline=fg, width=1)
 
