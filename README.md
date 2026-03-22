@@ -142,7 +142,7 @@ Your existing config is fully compatible. These are opt-in additions:
 
 | Feature | How to enable |
 |---|---|
-| **Themes** (6 built-in layouts) | Add `theme: terminal` (or `minimalist`, `old_fashioned`, `today`, `fantasy`) to `config.yaml` |
+| **Themes** (7 built-in layouts) | Add `theme: terminal` (or `minimalist`, `old_fashioned`, `today`, `fantasy`, `qotd`) to `config.yaml` |
 | **Event filtering** | Add a `filters:` block — hide events by calendar name, keyword, or all-day status |
 | **Configurable cache TTLs** | Add a `cache:` block to tune per-source TTL and fetch intervals |
 | **Circuit breaker tuning** | `cache.max_failures` and `cache.cooldown_minutes` |
@@ -251,7 +251,7 @@ birthdays:
 Switch the entire dashboard layout and visual style with one line:
 
 ```yaml
-theme: terminal   # default | terminal | minimalist | old_fashioned | today | fantasy
+theme: terminal   # default | terminal | minimalist | old_fashioned | today | fantasy | qotd
 ```
 
 Themes control component positions, proportions, fonts, and visual style -- not just
@@ -306,6 +306,17 @@ D&D-inspired aesthetic. Black canvas with Cinzel stone-inscription headers. A 21
 right side. Ornamental double-frame borders with diamond corner pieces.
 
 ![Fantasy theme](output/theme_fantasy.png)
+
+#### qotd
+
+Quote of the day, full screen. Forgoes the calendar, birthdays, and info panel entirely.
+The display is devoted to a single quote in large Playfair Display Bold, centered
+typographically. Font size scales automatically — from 52px down to 20px — so the full
+quote always fits without truncation. A compact full-width weather banner runs across the
+bottom 80px: current conditions, hi/lo, feels-like, wind, a 3-day forecast strip, and
+moon phase.
+
+![QOTD theme](output/theme_qotd.png)
 
 ### Creating your own theme
 
@@ -508,7 +519,7 @@ schedule:
 
 timezone: "local"                  # IANA name or "local"
 title: "Home Dashboard"            # text shown in the header bar
-theme: "default"                   # see Themes section
+theme: "default"                   # default | terminal | minimalist | old_fashioned | today | fantasy | qotd
 
 cache:
   weather_ttl_minutes: 60          # data older than 4x TTL is discarded
@@ -674,14 +685,16 @@ Dashboard-v3/
 │       │   ├── minimalist.py
 │       │   ├── old_fashioned.py
 │       │   ├── today.py
-│       │   └── fantasy.py
+│       │   ├── fantasy.py
+│       │   └── qotd.py
 │       └── components/           # One file per UI region
 │           ├── header.py
 │           ├── week_view.py
 │           ├── weather_panel.py
 │           ├── birthday_bar.py
 │           ├── today_view.py
-│           └── info_panel.py
+│           ├── info_panel.py
+│           └── qotd_panel.py
 ├── tests/                        # 25 test files, 591 tests
 ├── Makefile
 ├── requirements.txt              # Core dependencies
@@ -698,7 +711,7 @@ Dashboard-v3/
 | [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather condition icons + moon phase glyphs |
 | [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) | `terminal` theme |
 | [DM Sans](https://fonts.google.com/specimen/DM+Sans) | `minimalist` theme |
-| [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | `old_fashioned` theme |
+| [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | `old_fashioned` and `qotd` themes |
 | [Cinzel](https://fonts.google.com/specimen/Cinzel) | `fantasy` theme |
 
 Custom fonts can be added per-theme via `ThemeStyle` font callables -- see
