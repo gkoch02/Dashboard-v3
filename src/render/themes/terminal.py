@@ -43,5 +43,8 @@ def terminal_theme() -> Theme:
             font_date_number=synthetic_genesis,
             font_month_title=uesc_display,
             font_title=maratype,
+            font_section_label=uesc_display,
+            font_quote=maratype,
+            font_quote_author=uesc_display,
         ),
     )

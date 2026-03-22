@@ -121,9 +121,10 @@ def draw_info(
     y = y0 + 28
     max_width = w - pad * 2
 
-    quote_font = style.font_regular(14)
+    _quote_fn = style.font_quote if style.font_quote is not None else style.font_regular
+    quote_font = _quote_fn(14)
     if _count_lines(text, quote_font, max_width) > 3:
-        quote_font = style.font_regular(12)
+        quote_font = _quote_fn(12)
         max_lines = 4
     else:
         max_lines = 3
@@ -134,7 +135,8 @@ def draw_info(
     )
 
     # Attribution
-    author_font = style.font_regular(12)
+    _author_fn = style.font_quote_author if style.font_quote_author is not None else style.font_regular
+    author_font = _author_fn(12)
     attr_y = y + used_h + 6
     if attr_y + 16 < y0 + h:
         draw.text((x0 + pad, attr_y), f'— {quote["author"]}', font=author_font, fill=style.fg)
