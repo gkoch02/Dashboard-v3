@@ -146,11 +146,24 @@ def _draw_event_list(
         )
         return
 
+    time_h = text_height(time_font)
+    title_h = text_height(title_font)
+    # Minimum height needed to render each event type (used for overflow guard).
+    # Timed: time line + gap + one title line + spacing.
+    # All-day: bar + spacing.
+    min_timed_h = time_h + 2 + title_h + event_spacing
+    min_allday_h = allday_bar_h + event_spacing
+    # Height reserved for the "+N more" overflow indicator.
+    more_h = time_h
+    bottom = y0 + total_h - PAD  # absolute y limit for content
+
     y = y0 + PAD
     for idx, event in enumerate(events):
-        if y - y0 + text_height(title_font) > total_h - PAD:
+        min_h = min_allday_h if event.is_all_day else min_timed_h
+        if y + min_h > bottom:
             remaining = len(events) - idx
-            draw.text((x, y), f"+{remaining} more", font=time_font, fill=style.fg)
+            more_y = min(y, bottom - more_h)
+            draw.text((x, more_y), f"+{remaining} more", font=time_font, fill=style.fg)
             break
 
         if event.is_all_day:
@@ -176,19 +189,21 @@ def _draw_event_list(
                 start_s = start_s.rstrip("ap")
             time_str = f"{start_s}–{end_s}"
             draw_text_truncated(draw, (x, y), time_str, time_font, max_w, fill=style.fg)
-            y += text_height(time_font) + 2
+            y += time_h + 2
 
-            # Title (wrapped up to 2 lines)
+            # Title — limit to however many lines fit in the remaining space.
+            remaining_for_title = bottom - event_spacing - y
+            max_lines = max(1, remaining_for_title // (title_h + 2))
             used_h = draw_text_wrapped(
                 draw, (x, y), event.summary, title_font,
-                max_w, max_lines=2, line_spacing=2, fill=style.fg,
+                max_w, max_lines=min(2, max_lines), line_spacing=2, fill=style.fg,
             )
-            y += max(used_h, text_height(title_font))
+            y += max(used_h, title_h)
 
             # Location (first segment only)
             if event.location:
                 loc_text = event.location.split(",")[0].strip()
-                if loc_text and y - y0 + text_height(loc_font) <= total_h - PAD:
+                if loc_text and y + text_height(loc_font) <= bottom:
                     y += 2
                     draw_text_truncated(draw, (x, y), loc_text, loc_font, max_w, fill=style.fg)
                     y += text_height(loc_font)
