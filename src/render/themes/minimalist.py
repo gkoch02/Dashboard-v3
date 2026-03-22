@@ -5,7 +5,7 @@ at 374px — 54px more than the default. Today's column is marked with a full
 inverted black header block (not a soft double-underline) — the NOW is declared.
 All-day event bars are filled black. Events pack to a 1.0× grid.
 
-An 84px bottom strip splits asymmetrically: weather at 500px (wider,
+A 100px bottom strip splits asymmetrically: weather at 500px (wider,
 proportioned ~5:3) and quote at 300px. Section labels are 8pt regular —
 functional, recessive. The quote label collapses to a single em dash.
 
@@ -20,8 +20,8 @@ from src.render.fonts import dm_regular, dm_medium, dm_semibold, dm_bold
 
 def minimalist_theme() -> Theme:
     header_h = 22
-    bottom_h = 84
-    week_h = 480 - header_h - bottom_h     # 374px
+    bottom_h = 100
+    week_h = 480 - header_h - bottom_h     # 358px
     bottom_y = header_h + week_h            # 396
 
     return Theme(
