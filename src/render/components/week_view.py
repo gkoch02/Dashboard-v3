@@ -110,7 +110,7 @@ def draw_week(
     week_start = today - timedelta(days=today.weekday())
 
     _col_hdr_fn = style.font_title if style.font_title is not None else style.font_bold
-    day_label_font = _col_hdr_fn(11)
+    day_label_font = _col_hdr_fn(14)
     day_num_font = _col_hdr_fn(16)
 
     _date_num_fn = style.font_date_number if style.font_date_number is not None else style.font_bold
@@ -203,7 +203,7 @@ def draw_week(
                 draw.rectangle((cx, y0, cx + col_w - 1, y0 + header_h - 1), outline=style.fg)
         elif is_weekend:
             # Weekend: lighter styling — regular weight instead of semibold
-            wknd_abbr_font = _col_hdr_fn(11)
+            wknd_abbr_font = _col_hdr_fn(14)
             wknd_num_font = _col_hdr_fn(16)
             num_bb = draw.textbbox((0, 0), day_num, font=wknd_num_font)
             abbr_bb = draw.textbbox((0, 0), day_abbr, font=wknd_abbr_font)
