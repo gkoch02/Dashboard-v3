@@ -37,6 +37,12 @@ def _today(tz: tzinfo | None) -> date:
 
 # Cache the built service object so fetch_events and fetch_birthdays reuse it
 # within the same process run (fix: service built twice).
+#
+# Note: service account tokens auto-refresh via the google-auth library, so
+# caching the service object is safe for the typical hourly-cron use case.
+# The Google client library does not expose per-request HTTP timeouts;
+# callers rely on the ThreadPoolExecutor timeout in main.py (120s) as the
+# upper bound on any single API call.
 _service_cache: dict[str, Any] = {}
 _people_service_cache: dict[str, Any] = {}
 
