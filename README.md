@@ -71,6 +71,179 @@ Reports errors (must fix) and warnings (may cause issues) in your configuration.
 
 ---
 
+## Themes
+
+Switch the entire dashboard layout and visual style with one line in `config.yaml`:
+
+```yaml
+theme: terminal   # default | terminal | minimalist | old_fashioned | today | fantasy | qotd | random
+```
+
+Or override it from the command line without editing your config:
+
+```bash
+venv/bin/python -m src.main --dry-run --dummy --theme terminal
+```
+
+The `--theme` flag takes precedence over `config.yaml`. All eight values are accepted,
+including `random` (which triggers the daily rotation logic as normal).
+
+Themes control component positions, proportions, fonts, and visual style -- not just
+colors. Each theme can hide sections, rearrange panels, or use entirely different fonts.
+
+### Random daily rotation
+
+Set `theme: random` to automatically pick a different theme each day:
+
+```yaml
+theme: random
+```
+
+A theme is chosen once per day on the first refresh after midnight and reused for every
+subsequent refresh that day. The selection is persisted to
+`output/random_theme_state.json` so restarts mid-day do not re-roll the theme.
+
+Use `random_theme` to control which themes are in the rotation:
+
+```yaml
+theme: random
+random_theme:
+  include: []          # allowlist — only these themes rotate (empty = all themes)
+  exclude: []          # denylist — never use these themes
+```
+
+**Examples:**
+
+```yaml
+# Only rotate among calm, readable themes
+random_theme:
+  include: ["default", "minimalist", "terminal"]
+
+# Rotate everything except the full-screen quote theme
+random_theme:
+  exclude: ["qotd"]
+```
+
+- `include` is applied first; `exclude` is applied after.
+- If both are empty, all 7 themes are eligible.
+- If the pool is empty after filtering, the dashboard falls back to `"default"`.
+- Run `make check` to catch invalid theme names in either list.
+
+### Built-in themes
+
+#### default
+
+Classic layout. Black text on white. Filled black header, today column, and all-day
+event bars. 7-day calendar grid with weather/birthdays/quote along the bottom.
+
+![Default theme](output/theme_default.png)
+
+#### terminal
+
+Inverted canvas: **black background** with white text. Uses Share Tech Mono for a terminal
+aesthetic. Tighter event spacing. Today's column pops as a white-fill/black-text block.
+
+![Terminal theme](output/theme_terminal.png)
+
+#### minimalist
+
+Bauhaus editorial: form follows function. The week grid dominates at 374px — 54px more
+than default. Today's column header is a solid black block (not a soft underline). All-day
+bars are filled black. Events pack to a tight 1.0× grid. An asymmetric bottom strip puts
+weather at 500px and the quote at 300px. Section labels drop to 8pt regular so data leads.
+A 2px left-margin rule and 2px bottom rail frame the canvas. DM Sans font. Birthdays
+panel hidden.
+
+![Minimalist theme](output/theme_minimalist.png)
+
+#### old_fashioned
+
+Newspaper-style layout: a single-day view on the left with Playfair Display serif font,
+weather/birthdays/quote stacked vertically on the right. Taller 56px header.
+
+![Old Fashioned theme](output/theme_old_fashioned.png)
+
+#### today
+
+Single-day focused view. Large inverted date panel on the left, spacious event list on the
+right with full time ranges and locations. 60px header, 140px bottom strip. Ideal for a
+desk display.
+
+![Today theme](output/theme_today.png)
+
+#### fantasy
+
+D&D-inspired aesthetic. Black canvas with Cinzel stone-inscription headers. A 215px sidebar
+("Arcane Tower") stacks weather, birthdays, and quote. The "Quest Log" calendar fills the
+right side. Ornamental double-frame borders with diamond corner pieces.
+
+![Fantasy theme](output/theme_fantasy.png)
+
+#### qotd
+
+Quote of the day, full screen. Forgoes the calendar, birthdays, and info panel entirely.
+The display is devoted to a single quote in large Playfair Display Bold, centered
+typographically. Font size scales automatically — from 64px down to 20px — so the full
+quote always fits without truncation. A compact full-width weather banner runs across the
+bottom 80px: current conditions, hi/lo, feels-like, wind, a 3-day forecast strip, and
+moon phase.
+
+![QOTD theme](output/theme_qotd.png)
+
+### Creating your own theme
+
+Two steps -- no changes to any component code:
+
+**1. Create `src/render/themes/<name>.py`:**
+
+```python
+from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
+
+def retro_theme() -> Theme:
+    return Theme(
+        name="retro",
+        layout=ThemeLayout(
+            canvas_w=800, canvas_h=480,
+            header=ComponentRegion(0, 0, 800, 48),
+            week_view=ComponentRegion(0, 48, 540, 432),
+            weather=ComponentRegion(540, 48, 260, 144),
+            birthdays=ComponentRegion(540, 192, 260, 144),
+            info=ComponentRegion(540, 336, 260, 144),
+        ),
+        style=ThemeStyle(
+            invert_header=True,
+            invert_today_col=True,
+            invert_allday_bars=False,
+            spacing_scale=1.1,
+        ),
+    )
+```
+
+**2. Register in `src/render/theme.py`:**
+
+Add a clause to `load_theme()` and add the name to `AVAILABLE_THEMES`.
+
+Then preview:
+
+```bash
+venv/bin/python -m src.main --dry-run --dummy --config /dev/stdin <<'EOF'
+theme: retro
+display:
+  model: "epd7in5_V2"
+weather:
+  api_key: "dummy"
+  latitude: 40.7
+  longitude: -74.0
+google:
+  service_account_path: "credentials/service_account.json"
+  calendar_id: "dummy@group.calendar.google.com"
+EOF
+```
+
+See the theme reference tables and font customization guide in [`CLAUDE.md`](CLAUDE.md).
+
+---
+
 ## Upgrading from v2
 
 v3 is a drop-in upgrade. Your existing credentials and `config.yaml` work without changes.
@@ -244,179 +417,6 @@ google:
 birthdays:
   source: "contacts"
 ```
-
----
-
-## Themes
-
-Switch the entire dashboard layout and visual style with one line in `config.yaml`:
-
-```yaml
-theme: terminal   # default | terminal | minimalist | old_fashioned | today | fantasy | qotd | random
-```
-
-Or override it from the command line without editing your config:
-
-```bash
-venv/bin/python -m src.main --dry-run --dummy --theme terminal
-```
-
-The `--theme` flag takes precedence over `config.yaml`. All eight values are accepted,
-including `random` (which triggers the daily rotation logic as normal).
-
-Themes control component positions, proportions, fonts, and visual style -- not just
-colors. Each theme can hide sections, rearrange panels, or use entirely different fonts.
-
-### Random daily rotation
-
-Set `theme: random` to automatically pick a different theme each day:
-
-```yaml
-theme: random
-```
-
-A theme is chosen once per day on the first refresh after midnight and reused for every
-subsequent refresh that day. The selection is persisted to
-`output/random_theme_state.json` so restarts mid-day do not re-roll the theme.
-
-Use `random_theme` to control which themes are in the rotation:
-
-```yaml
-theme: random
-random_theme:
-  include: []          # allowlist — only these themes rotate (empty = all themes)
-  exclude: []          # denylist — never use these themes
-```
-
-**Examples:**
-
-```yaml
-# Only rotate among calm, readable themes
-random_theme:
-  include: ["default", "minimalist", "terminal"]
-
-# Rotate everything except the full-screen quote theme
-random_theme:
-  exclude: ["qotd"]
-```
-
-- `include` is applied first; `exclude` is applied after.
-- If both are empty, all 7 themes are eligible.
-- If the pool is empty after filtering, the dashboard falls back to `"default"`.
-- Run `make check` to catch invalid theme names in either list.
-
-### Built-in themes
-
-#### default
-
-Classic layout. Black text on white. Filled black header, today column, and all-day
-event bars. 7-day calendar grid with weather/birthdays/quote along the bottom.
-
-![Default theme](output/theme_default.png)
-
-#### terminal
-
-Inverted canvas: **black background** with white text. Uses Share Tech Mono for a terminal
-aesthetic. Tighter event spacing. Today's column pops as a white-fill/black-text block.
-
-![Terminal theme](output/theme_terminal.png)
-
-#### minimalist
-
-Bauhaus editorial: form follows function. The week grid dominates at 374px — 54px more
-than default. Today's column header is a solid black block (not a soft underline). All-day
-bars are filled black. Events pack to a tight 1.0× grid. An asymmetric bottom strip puts
-weather at 500px and the quote at 300px. Section labels drop to 8pt regular so data leads.
-A 2px left-margin rule and 2px bottom rail frame the canvas. DM Sans font. Birthdays
-panel hidden.
-
-![Minimalist theme](output/theme_minimalist.png)
-
-#### old_fashioned
-
-Newspaper-style layout: a single-day view on the left with Playfair Display serif font,
-weather/birthdays/quote stacked vertically on the right. Taller 56px header.
-
-![Old Fashioned theme](output/theme_old_fashioned.png)
-
-#### today
-
-Single-day focused view. Large inverted date panel on the left, spacious event list on the
-right with full time ranges and locations. 60px header, 140px bottom strip. Ideal for a
-desk display.
-
-![Today theme](output/theme_today.png)
-
-#### fantasy
-
-D&D-inspired aesthetic. Black canvas with Cinzel stone-inscription headers. A 215px sidebar
-("Arcane Tower") stacks weather, birthdays, and quote. The "Quest Log" calendar fills the
-right side. Ornamental double-frame borders with diamond corner pieces.
-
-![Fantasy theme](output/theme_fantasy.png)
-
-#### qotd
-
-Quote of the day, full screen. Forgoes the calendar, birthdays, and info panel entirely.
-The display is devoted to a single quote in large Playfair Display Bold, centered
-typographically. Font size scales automatically — from 64px down to 20px — so the full
-quote always fits without truncation. A compact full-width weather banner runs across the
-bottom 80px: current conditions, hi/lo, feels-like, wind, a 3-day forecast strip, and
-moon phase.
-
-![QOTD theme](output/theme_qotd.png)
-
-### Creating your own theme
-
-Two steps -- no changes to any component code:
-
-**1. Create `src/render/themes/<name>.py`:**
-
-```python
-from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
-
-def retro_theme() -> Theme:
-    return Theme(
-        name="retro",
-        layout=ThemeLayout(
-            canvas_w=800, canvas_h=480,
-            header=ComponentRegion(0, 0, 800, 48),
-            week_view=ComponentRegion(0, 48, 540, 432),
-            weather=ComponentRegion(540, 48, 260, 144),
-            birthdays=ComponentRegion(540, 192, 260, 144),
-            info=ComponentRegion(540, 336, 260, 144),
-        ),
-        style=ThemeStyle(
-            invert_header=True,
-            invert_today_col=True,
-            invert_allday_bars=False,
-            spacing_scale=1.1,
-        ),
-    )
-```
-
-**2. Register in `src/render/theme.py`:**
-
-Add a clause to `load_theme()` and add the name to `AVAILABLE_THEMES`.
-
-Then preview:
-
-```bash
-venv/bin/python -m src.main --dry-run --dummy --config /dev/stdin <<'EOF'
-theme: retro
-display:
-  model: "epd7in5_V2"
-weather:
-  api_key: "dummy"
-  latitude: 40.7
-  longitude: -74.0
-google:
-  service_account_path: "credentials/service_account.json"
-  calendar_id: "dummy@group.calendar.google.com"
-EOF
-```
-
-See the theme reference tables and font customization guide in [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
