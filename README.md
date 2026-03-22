@@ -451,8 +451,12 @@ From your development machine:
 make deploy
 ```
 
-Rsyncs to `~/home-dashboard/` on `pi@raspberrypi.local`. Adjust the hostname in the
-`Makefile` if needed.
+Rsyncs to `~/home-dashboard/` on `pi@raspberrypi.local` by default. Override
+the target via Make variables:
+
+```bash
+make deploy PI_USER=myuser PI_HOST=mypi.local PI_DIR=~/dashboard
+```
 
 ### Step 3 -- Set up on the Pi
 
@@ -479,6 +483,10 @@ venv/bin/python -m src.main --config config/config.yaml
 ```
 
 ### Step 6 -- Install the systemd timer
+
+> **Note:** The `deploy/dashboard.service` file contains hardcoded paths
+> (`/home/pi/home-dashboard`). Edit them if your Pi user or install directory
+> differs from the defaults.
 
 ```bash
 make install
@@ -680,7 +688,7 @@ to `output/calendar_sync_state.json`.
 | `make dry` | Render with dummy data to `output/latest.png` |
 | `make test` | Run `pytest tests/ -v` (775 tests across 31 files) |
 | `make check` | Validate config file and exit |
-| `make deploy` | rsync project to Raspberry Pi |
+| `make deploy` | rsync project to Raspberry Pi (`PI_USER`, `PI_HOST`, `PI_DIR` configurable) |
 | `make install` | Copy systemd timer/service to Pi and enable |
 
 ### CLI flags
