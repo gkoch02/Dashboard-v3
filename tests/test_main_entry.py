@@ -194,6 +194,70 @@ class TestMainModule:
             mock_main.assert_called_once()
 
 
+class TestMainDateFlag:
+    """--date should override 'today' in dry-run mode."""
+
+    def test_date_flag_renders_image(self, tmp_path):
+        config_path = tmp_path / "config.yaml"
+        _write_minimal_config(config_path)
+
+        with patch("sys.argv", [
+            "main", "--dry-run", "--dummy", "--date", "2025-12-25",
+            "--config", str(config_path),
+        ]):
+            from src.main import main
+            main()
+
+        assert (tmp_path / "latest.png").exists()
+
+    def test_date_flag_overrides_now(self, tmp_path):
+        """generate_dummy_data should receive a 'now' on the specified date."""
+        config_path = tmp_path / "config.yaml"
+        _write_minimal_config(config_path)
+
+        with patch("sys.argv", [
+            "main", "--dry-run", "--dummy", "--date", "2025-07-04",
+            "--config", str(config_path),
+        ]):
+            from src.main import main
+            from datetime import date
+            with patch("src.main.generate_dummy_data", wraps=__import__("src.main", fromlist=["generate_dummy_data"]).generate_dummy_data) as mock_gen:
+                main()
+
+        call_kwargs = mock_gen.call_args
+        passed_now = call_kwargs.kwargs.get("now") or (call_kwargs.args[1] if len(call_kwargs.args) > 1 else None)
+        assert passed_now is not None
+        assert passed_now.date() == date(2025, 7, 4)
+
+    def test_date_without_dry_run_errors(self, tmp_path):
+        """--date without --dry-run should exit with an error."""
+        config_path = tmp_path / "config.yaml"
+        _write_minimal_config(config_path)
+
+        with patch("sys.argv", [
+            "main", "--dummy", "--date", "2025-12-25",
+            "--config", str(config_path),
+        ]):
+            from src.main import main
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+        assert exc_info.value.code != 0
+
+    def test_invalid_date_format_errors(self, tmp_path):
+        """An invalid --date value should exit with an error."""
+        config_path = tmp_path / "config.yaml"
+        _write_minimal_config(config_path)
+
+        with patch("sys.argv", [
+            "main", "--dry-run", "--dummy", "--date", "not-a-date",
+            "--config", str(config_path),
+        ]):
+            from src.main import main
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+        assert exc_info.value.code != 0
+
+
 class TestMainLiveDataPath:
     """Tests for the non-dummy data fetch path (line 507) and image-change logic."""
 

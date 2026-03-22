@@ -93,6 +93,30 @@ class TestGenerateDummyData:
         expected_today = datetime.now(tz).date()
         assert data.fetched_at.date() == expected_today
 
+    def test_now_override_sets_fetched_at(self):
+        fixed = datetime(2025, 12, 25, 10, 0, 0)
+        data = generate_dummy_data(now=fixed)
+        assert data.fetched_at == fixed
+
+    def test_now_override_anchors_events_to_date(self):
+        fixed = datetime(2025, 12, 25, 10, 0, 0)
+        data = generate_dummy_data(now=fixed)
+        # Events are week-anchored; Monday of 2025-12-25's week is 2025-12-22
+        from datetime import date
+        expected_week_start = date(2025, 12, 22)
+        event_dates = {e.start.date() for e in data.events if not e.is_all_day}
+        # All timed events should fall within the week of 2025-12-22
+        for d in event_dates:
+            assert d >= expected_week_start
+            assert d < date(2025, 12, 29)
+
+    def test_now_override_anchors_forecast_to_date(self):
+        fixed = datetime(2025, 12, 25, 10, 0, 0)
+        data = generate_dummy_data(now=fixed)
+        from datetime import date
+        # First forecast day should be 2025-12-26 (today + 1)
+        assert data.weather.forecast[0].date == date(2025, 12, 26)
+
 
 class TestInQuietHours:
     def _dt(self, hour: int, minute: int = 0) -> datetime:
