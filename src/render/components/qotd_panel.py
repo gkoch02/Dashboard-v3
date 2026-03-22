@@ -94,7 +94,7 @@ def draw_qotd(
     best_quote_font = None
     best_attr_font = None
 
-    for size in (52, 48, 44, 40, 36, 32, 28, 24, 20):
+    for size in (64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20):
         q_font = quote_font_fn(size)
         a_size = max(13, int(size * 0.52))
         a_font = style.font_semibold(a_size)
@@ -140,7 +140,7 @@ def draw_qotd(
     # ---- Decorative oversized quotation marks ----
     # Rendered at ~3.5× body size, positioned as large corner accents that
     # frame the centred quote text — opening mark top-left, closing bottom-right.
-    mark_size = min(120, max(72, int(best_size * 3.5)))
+    mark_size = min(100, max(60, int(best_size * 3.0)))
     mark_font = style.font_bold(mark_size)
 
     for glyph, side in (('\u201c', 'open'), ('\u201d', 'close')):
