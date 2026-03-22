@@ -330,11 +330,11 @@ class TestRenderDashboardWithThemes:
     def test_fantasy_sidebar_layout(self):
         """Sidebar panels live on the left; week view on the right."""
         t = load_theme("fantasy")
-        assert t.layout.week_view.x > 0          # quest log is not at x=0
-        assert t.layout.weather.x == 0           # weather is in the sidebar
-        assert t.layout.birthdays.x == 0         # birthdays is in the sidebar
-        assert t.layout.info.x == 0              # quote is in the sidebar
-        assert t.layout.week_view.w > t.layout.weather.w  # calendar wider than sidebar
+        assert t.layout.week_view.x > 0               # quest log is not at x=0
+        assert t.layout.weather.x < t.layout.week_view.x    # weather is in the sidebar
+        assert t.layout.birthdays.x < t.layout.week_view.x  # birthdays is in the sidebar
+        assert t.layout.info.x < t.layout.week_view.x       # quote is in the sidebar
+        assert t.layout.week_view.w > t.layout.weather.w    # calendar wider than sidebar
 
     def test_fantasy_component_labels(self):
         """Fantasy-themed section labels are configured."""

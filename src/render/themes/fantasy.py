@@ -45,6 +45,12 @@ _WEATHER_H = 180        # oracle's omen — weather
 _BIRTHDAY_H = 130       # the fellowship — birthdays
 _INFO_H = _BODY_H - _WEATHER_H - _BIRTHDAY_H  # ancient wisdom — quote
 
+# The ornamental double-frame uses an inner border at inset 6 and an outer
+# border at inset 2.  Component regions are inset by one extra pixel so that
+# solid-filled rectangles (inverted header, alert bars, month band, today
+# column) never reach the frame band and visually overwrite the border lines.
+_CI = 7   # content inset — one pixel inside the inner border (INNER=6)
+
 
 # ---------------------------------------------------------------------------
 # Ornamental drawing helpers
@@ -190,13 +196,14 @@ def fantasy_theme() -> Theme:
     layout = ThemeLayout(
         canvas_w=_CANVAS_W,
         canvas_h=_CANVAS_H,
-        header=ComponentRegion(0, 0, _CANVAS_W, _HEADER_H),
-        # Week view fills the right 585px × full body height — the "quest log"
-        week_view=ComponentRegion(_QUEST_X, _BODY_Y, _QUEST_W, _BODY_H),
-        # Sidebar panels stacked on the left (the "arcane tower")
-        weather=ComponentRegion(0, _BODY_Y, _SIDEBAR_W, _WEATHER_H),
-        birthdays=ComponentRegion(0, _BODY_Y + _WEATHER_H, _SIDEBAR_W, _BIRTHDAY_H),
-        info=ComponentRegion(0, _BODY_Y + _WEATHER_H + _BIRTHDAY_H, _SIDEBAR_W, _INFO_H),
+        # Inset all regions by _CI so solid-filled boxes end before the frame band.
+        header=ComponentRegion(_CI, _CI, _CANVAS_W - 2 * _CI, _HEADER_H - _CI),
+        # Week view — "quest log" on the right; inset from right canvas edge only
+        week_view=ComponentRegion(_QUEST_X, _BODY_Y, _CANVAS_W - _QUEST_X - _CI, _BODY_H),
+        # Sidebar panels stacked on the left (the "arcane tower"); inset from left edge
+        weather=ComponentRegion(_CI, _BODY_Y, _SIDEBAR_W - _CI, _WEATHER_H),
+        birthdays=ComponentRegion(_CI, _BODY_Y + _WEATHER_H, _SIDEBAR_W - _CI, _BIRTHDAY_H),
+        info=ComponentRegion(_CI, _BODY_Y + _WEATHER_H + _BIRTHDAY_H, _SIDEBAR_W - _CI, _INFO_H),
         today_view=ComponentRegion(0, 0, 0, 0, visible=False),
         draw_order=["header", "weather", "birthdays", "info", "week_view"],
         overlay_fn=_draw_fantasy_overlay,
