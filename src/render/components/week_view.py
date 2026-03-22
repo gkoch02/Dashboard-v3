@@ -314,7 +314,8 @@ def _wrap_line_count(draw: ImageDraw.ImageDraw, text: str, font, max_w: int) -> 
     lines, current_line = 0, ""
     for word in text.split():
         candidate = f"{current_line} {word}".strip()
-        w = draw.textbbox((0, 0), candidate, font=font)[2]
+        bbox = draw.textbbox((0, 0), candidate, font=font)
+        w = bbox[2] - bbox[0]
         if w <= max_w:
             current_line = candidate
         else:

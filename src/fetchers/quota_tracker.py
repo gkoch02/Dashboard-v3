@@ -80,4 +80,4 @@ class QuotaTracker:
             with open(path, "w") as f:
                 json.dump(raw, f, indent=2)
         except Exception as exc:
-            logger.debug("Could not save quota state: %s", exc)
+            logger.warning("Could not save quota state: %s", exc)

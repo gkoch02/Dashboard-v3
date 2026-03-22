@@ -44,9 +44,15 @@ _people_service_cache: dict[str, Any] = {}
 def _build_service(cfg: GoogleConfig):
     key = cfg.service_account_path
     if key not in _service_cache:
-        creds = service_account.Credentials.from_service_account_file(
-            cfg.service_account_path, scopes=_SCOPES
-        )
+        try:
+            creds = service_account.Credentials.from_service_account_file(
+                cfg.service_account_path, scopes=_SCOPES
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to load service account credentials from "
+                f"{cfg.service_account_path!r}: {exc}"
+            ) from exc
         _service_cache[key] = build("calendar", "v3", credentials=creds, cache_discovery=False)
     return _service_cache[key]
 
@@ -60,9 +66,15 @@ def _build_people_service(cfg: GoogleConfig):
     """
     key = f"{cfg.service_account_path}:{cfg.contacts_email}"
     if key not in _people_service_cache:
-        creds = service_account.Credentials.from_service_account_file(
-            cfg.service_account_path, scopes=_PEOPLE_SCOPES
-        )
+        try:
+            creds = service_account.Credentials.from_service_account_file(
+                cfg.service_account_path, scopes=_PEOPLE_SCOPES
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to load service account credentials from "
+                f"{cfg.service_account_path!r}: {exc}"
+            ) from exc
         if cfg.contacts_email:
             creds = creds.with_subject(cfg.contacts_email)
         _people_service_cache[key] = build("people", "v1", credentials=creds, cache_discovery=False)
