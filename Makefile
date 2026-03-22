@@ -1,4 +1,4 @@
-.PHONY: dry test deploy setup install check
+.PHONY: dry test deploy setup install check previews
 
 VENV = venv/bin/python
 
@@ -7,6 +7,14 @@ _check-venv:
 
 dry: _check-venv
 	$(VENV) -m src.main --dry-run --dummy
+
+previews: _check-venv
+	@for theme in default fantasy minimalist old_fashioned qotd terminal today; do \
+		echo "Generating preview for theme: $$theme"; \
+		$(VENV) -m src.main --dry-run --dummy --theme $$theme; \
+		cp output/latest.png output/theme_$$theme.png; \
+	done
+	@echo "All theme previews saved to output/theme_*.png"
 
 test: _check-venv
 	$(VENV) -m pytest tests/ -v

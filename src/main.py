@@ -481,6 +481,17 @@ def main():
         "--check-config", action="store_true",
         help="Validate config and exit without rendering",
     )
+    parser.add_argument(
+        "--theme",
+        choices=["default", "fantasy", "minimalist", "old_fashioned", "qotd",
+                 "random", "terminal", "today"],
+        default=None,
+        metavar="THEME",
+        help=(
+            "Override the theme from config. "
+            "Choices: default, fantasy, minimalist, old_fashioned, qotd, random, terminal, today"
+        ),
+    )
     args = parser.parse_args()
 
     # Configure logging before load_config so any import-time or config-loading
@@ -540,7 +551,7 @@ def main():
         logger.info("Filtered events: %d -> %d", original_count, len(data.events))
 
     # Resolve "random" to a concrete theme name for today
-    theme_name = cfg.theme
+    theme_name = args.theme if args.theme is not None else cfg.theme
     if theme_name == "random":
         from src.render.random_theme import pick_random_theme
         theme_name = pick_random_theme(
