@@ -5,7 +5,7 @@ weather panel for a data-heavy, information-dense terminal aesthetic.
 Uses Share Tech Mono for an authentic monospace terminal feel.
 """
 from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
-from src.render.fonts import cyber_mono
+from src.render.fonts import cyber_mono, synthetic_genesis, uesc_display
 
 
 def terminal_theme() -> Theme:
@@ -40,5 +40,7 @@ def terminal_theme() -> Theme:
             font_medium=cyber_mono,
             font_semibold=cyber_mono,
             font_bold=cyber_mono,
+            font_date_number=synthetic_genesis,
+            font_month_title=uesc_display,
         ),
     )

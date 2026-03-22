@@ -100,6 +100,10 @@ class ThemeStyle:
     font_medium: FontCallable | None = None
     font_semibold: FontCallable | None = None
     font_bold: FontCallable | None = None
+    # Optional overrides for specific large display elements in the week view.
+    # Falls back to font_bold when None.
+    font_date_number: FontCallable | None = None  # large today date numeral
+    font_month_title: FontCallable | None = None  # large month name band
 
     # Event spacing multiplier (applied in _fonts_for_tier)
     spacing_scale: float = 1.0

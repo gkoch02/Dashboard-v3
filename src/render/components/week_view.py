@@ -112,7 +112,8 @@ def draw_week(
     day_label_font = style.font_semibold(11)
     day_num_font = style.font_bold(16)
 
-    date_section_font = style.font_bold(100)
+    _date_num_fn = style.font_date_number if style.font_date_number is not None else style.font_bold
+    date_section_font = _date_num_fn(100)
     date_y = body_top + body_h - date_section_h  # top of combined date cell
 
     # Saturday is col 5 (Mon=0 … Sat=5, Sun=6)
@@ -266,7 +267,8 @@ def draw_week(
         vline(draw, sat_cx, date_y, y0 + total_h - 1, fill=style.fg)
 
     # Combined "Today" cell — inverted month header, normal day number
-    month_font = style.font_bold(33)
+    _month_fn = style.font_month_title if style.font_month_title is not None else style.font_bold
+    month_font = _month_fn(33)
     month_text = today.strftime("%B").upper()
     mbb = draw.textbbox((0, 0), month_text, font=month_font)
     month_w = mbb[2] - mbb[0]

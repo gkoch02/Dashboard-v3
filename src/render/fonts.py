@@ -96,6 +96,16 @@ def cinzel_black(size: int) -> ImageFont.FreeTypeFont:
     return _get_cinzel(size, 900)
 
 
+# Synthetic Genesis — sci-fi display font for the terminal theme date number.
+def synthetic_genesis(size: int) -> ImageFont.FreeTypeFont:
+    return get_font("Synthetic Genesis.otf", size)
+
+
+# UESC Display — clean display font for the terminal theme month title.
+def uesc_display(size: int) -> ImageFont.FreeTypeFont:
+    return get_font("UESC Display.otf", size)
+
+
 # Playfair Display — newspaper serif font for the Old Fashioned theme.
 def playfair_regular(size: int) -> ImageFont.FreeTypeFont:
     return get_font("PlayfairDisplay-Regular.ttf", size)
