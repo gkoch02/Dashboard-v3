@@ -219,11 +219,12 @@ def draw_week(
             draw.text((cx + PAD + abbr_w, ty_num), day_num, font=day_num_font, fill=style.fg)
 
         # Header underline
-        hline(draw, y0 + header_h - 1, cx, cx + col_w - 1, fill=style.fg)
+        if style.show_borders:
+            hline(draw, y0 + header_h - 1, cx, cx + col_w - 1, fill=style.fg)
 
         # Column separator (right edge)
         FRI_COL = SAT_COL - 1
-        if col < _COL_COUNT - 1:
+        if col < _COL_COUNT - 1 and style.show_borders:
             sep_bottom = (date_y - 1) if col in (FRI_COL, SAT_COL) else (y0 + total_h - 1)
             vline(draw, cx + col_w - 1, y0, y0 + header_h - 1, fill=style.fg)
             dashed_vline(draw, cx + col_w - 1, body_top, sep_bottom, fill=style.fg)
@@ -257,7 +258,8 @@ def draw_week(
             )
 
     # Solid left border for the combined date cell (Saturday's left edge)
-    vline(draw, sat_cx, date_y, y0 + total_h - 1, fill=style.fg)
+    if style.show_borders:
+        vline(draw, sat_cx, date_y, y0 + total_h - 1, fill=style.fg)
 
     # Combined "Today" cell — inverted month header, normal day number
     month_font = style.font_bold(33)

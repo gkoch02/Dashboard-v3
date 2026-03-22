@@ -36,7 +36,8 @@ def draw_header(
     else:
         text_fill = style.fg
         # Draw a bottom border line for visual separation when there's no filled bar
-        hline(draw, y + h - 1, x, x + w - 1, fill=style.fg)
+        if style.show_borders:
+            hline(draw, y + h - 1, x, x + w - 1, fill=style.fg)
 
     # Title (left)
     title_font = style.font_bold(20)
