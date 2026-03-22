@@ -1,6 +1,6 @@
 """Minimalist theme: Bauhaus — form follows function, the grid is the content.
 
-Ultra-slim 22px header (single-pixel rule, no fill). The week grid dominates
+Ultra-slim 22px header (no fill, no border). The week grid dominates
 at 374px — 54px more than the default. Today's column is marked with a full
 inverted black header block (not a soft double-underline) — the NOW is declared.
 All-day event bars are filled black. Events pack to a 1.0× grid.
@@ -9,31 +9,13 @@ An 84px bottom strip splits asymmetrically: weather at 500px (wider,
 proportioned ~5:3) and quote at 300px. Section labels are 8pt regular —
 functional, recessive. The quote label collapses to a single em dash.
 
-Overlay: a 2px left-margin vertical rule runs from below the header to the
-bottom edge; a 2px bottom horizontal rail closes the frame. Two rules — that
-is all the ornamentation this layout needs.
+No structural borders or separator lines — pure whitespace defines the regions.
 
 Font: DM Sans — geometric, screen-optimized variable sans. Each weight is used
 at its optical sweet spot.
 """
 from src.render.theme import ComponentRegion, Theme, ThemeLayout, ThemeStyle
 from src.render.fonts import dm_regular, dm_medium, dm_semibold, dm_bold
-from src.render.primitives import hline, vline
-
-
-def _bauhaus_overlay(draw, layout: ThemeLayout, style: ThemeStyle) -> None:
-    """Two structural rails: 2px left-margin rule + 2px bottom rule."""
-    h = layout.canvas_h
-    w = layout.canvas_w
-    y_start = layout.header.h  # begin below the header
-
-    # Left margin rail — anchors the grid like a Bauhaus column rule
-    vline(draw, 0, y_start, h - 1, fill=style.fg)
-    vline(draw, 1, y_start, h - 1, fill=style.fg)
-
-    # Bottom rail — closes the frame
-    hline(draw, h - 1, 0, w - 1, fill=style.fg)
-    hline(draw, h - 2, 0, w - 1, fill=style.fg)
 
 
 def minimalist_theme() -> Theme:
@@ -53,14 +35,14 @@ def minimalist_theme() -> Theme:
             birthdays=ComponentRegion(0, 0, 0, 0, visible=False),
             info=ComponentRegion(500, bottom_y, 300, bottom_h),
             draw_order=["header", "week_view", "weather", "info"],
-            overlay_fn=_bauhaus_overlay,
         ),
         style=ThemeStyle(
             fg=0,
             bg=1,
-            invert_header=False,          # single-pixel rule, no filled bar
+            invert_header=False,          # no filled bar, no border line
             invert_today_col=True,        # bold black today — the NOW is declared
             invert_allday_bars=True,      # solid black all-day bars, no outlines
+            show_borders=False,           # no structural borders or separator lines
             spacing_scale=1.0,            # tight, grid-precise event packing
             label_font_size=8,            # labels recede; data leads
             label_font_weight="regular",

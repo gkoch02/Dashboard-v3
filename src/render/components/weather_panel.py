@@ -34,11 +34,12 @@ def draw_weather(
     pad = L.PAD
 
     # Top border (2px for stronger section separation)
-    hline(draw, y0, x0, x0 + w, fill=style.fg)
-    hline(draw, y0 + 1, x0, x0 + w, fill=style.fg)
+    if style.show_borders:
+        hline(draw, y0, x0, x0 + w, fill=style.fg)
+        hline(draw, y0 + 1, x0, x0 + w, fill=style.fg)
 
-    # Right separator
-    vline(draw, x0 + w - 1, y0, y0 + h, fill=style.fg)
+        # Right separator
+        vline(draw, x0 + w - 1, y0, y0 + h, fill=style.fg)
 
     # Section label + moon phase icon
     label_font = style.label_font()
@@ -140,7 +141,8 @@ def draw_weather(
 
     # Forecast strip along the bottom.
     forecast_top = y0 + h - forecast_h
-    hline(draw, forecast_top, x0, x0 + w, fill=style.fg)
+    if style.show_borders:
+        hline(draw, forecast_top, x0, x0 + w, fill=style.fg)
 
     forecast_items = weather.forecast or []
     n_alerts = len(weather.alerts)
@@ -199,7 +201,7 @@ def draw_weather(
                     )
 
         # Column separators
-        if i < n_cols - 1:
+        if i < n_cols - 1 and style.show_borders:
             vline(draw, cx + col_w, forecast_top, y0 + h, fill=style.fg)
 
 

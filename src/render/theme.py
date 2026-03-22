@@ -112,6 +112,10 @@ class ThemeStyle:
     # Keys: "weather", "birthdays", "info".  Missing keys fall back to defaults.
     component_labels: dict[str, str] = field(default_factory=dict)
 
+    # When False, all structural border lines and separators are suppressed.
+    # Useful for borderless themes like minimalist.
+    show_borders: bool = True
+
     def __post_init__(self) -> None:
         """Fill in default fonts from fonts.py when callables were not provided."""
         if any(
