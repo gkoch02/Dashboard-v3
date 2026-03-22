@@ -109,8 +109,9 @@ def draw_week(
     # Find Monday of this week (weekday() == 0 for Monday)
     week_start = today - timedelta(days=today.weekday())
 
-    day_label_font = style.font_semibold(11)
-    day_num_font = style.font_bold(16)
+    _col_hdr_fn = style.font_title if style.font_title is not None else style.font_bold
+    day_label_font = _col_hdr_fn(11)
+    day_num_font = _col_hdr_fn(16)
 
     _date_num_fn = style.font_date_number if style.font_date_number is not None else style.font_bold
     date_section_font = _date_num_fn(100)
@@ -173,7 +174,7 @@ def draw_week(
         if is_today and style.invert_today_col:
             # Inverted header for today
             filled_rect(draw, (cx, y0, cx + col_w - 1, y0 + header_h - 1), fill=style.fg)
-            fnt = style.font_bold(16)
+            fnt = _col_hdr_fn(16)
             num_bb = draw.textbbox((0, 0), day_num, font=fnt)
             abbr_bb = draw.textbbox((0, 0), day_abbr, font=fnt)
             num_ink_h = num_bb[3] - num_bb[1]
@@ -184,7 +185,7 @@ def draw_week(
             draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=style.bg)
         elif is_today and not style.invert_today_col:
             # Non-inverted today: bold text + accent
-            fnt = style.font_bold(16)
+            fnt = _col_hdr_fn(16)
             num_bb = draw.textbbox((0, 0), day_num, font=fnt)
             abbr_bb = draw.textbbox((0, 0), day_abbr, font=fnt)
             num_ink_h = num_bb[3] - num_bb[1]
@@ -202,8 +203,8 @@ def draw_week(
                 draw.rectangle((cx, y0, cx + col_w - 1, y0 + header_h - 1), outline=style.fg)
         elif is_weekend:
             # Weekend: lighter styling — regular weight instead of semibold
-            wknd_abbr_font = style.font_regular(11)
-            wknd_num_font = style.font_regular(16)
+            wknd_abbr_font = _col_hdr_fn(11)
+            wknd_num_font = _col_hdr_fn(16)
             num_bb = draw.textbbox((0, 0), day_num, font=wknd_num_font)
             abbr_bb = draw.textbbox((0, 0), day_abbr, font=wknd_abbr_font)
             num_ink_h = num_bb[3] - num_bb[1]

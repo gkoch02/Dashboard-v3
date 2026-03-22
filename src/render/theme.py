@@ -104,6 +104,7 @@ class ThemeStyle:
     # Falls back to font_bold when None.
     font_date_number: FontCallable | None = None  # large today date numeral
     font_month_title: FontCallable | None = None  # large month name band
+    font_title: FontCallable | None = None  # dashboard title + day column headers
 
     # Event spacing multiplier (applied in _fonts_for_tier)
     spacing_scale: float = 1.0

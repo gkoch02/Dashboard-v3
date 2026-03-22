@@ -40,7 +40,8 @@ def draw_header(
             hline(draw, y + h - 1, x, x + w - 1, fill=style.fg)
 
     # Title (left)
-    title_font = style.font_bold(20)
+    _title_fn = style.font_title if style.font_title is not None else style.font_bold
+    title_font = _title_fn(20)
     th = text_height(title_font)
     title_y = y + (h - th) // 2
     draw.text((x + pad, title_y), title, font=title_font, fill=text_fill)
