@@ -115,25 +115,31 @@ def _fetch_forecast(
     today_high: float | None = None
     today_low: float | None = None
     if today in by_day:
-        today_slots = by_day[today]
-        today_high = max(s["main"]["temp_max"] for s in today_slots)
-        today_low = min(s["main"]["temp_min"] for s in today_slots)
+        today_slots = [s for s in by_day[today] if "main" in s]
+        if today_slots:
+            today_high = max(s["main"]["temp_max"] for s in today_slots)
+            today_low = min(s["main"]["temp_min"] for s in today_slots)
 
     forecasts: list[DayForecast] = []
     for day_date in sorted(d for d in by_day if d != today)[:6]:
-        slots = by_day[day_date]
+        slots = [s for s in by_day[day_date] if "main" in s]
+        if not slots:
+            continue
         highs = [s["main"]["temp_max"] for s in slots]
         lows = [s["main"]["temp_min"] for s in slots]
         midday = _pick_midday(slots, tz=tz) or slots[0]
         # Maximum precipitation probability across all slots for the day (0.0–1.0)
         pop_values = [s.get("pop", 0.0) for s in slots]
         precip_chance = max(pop_values) if pop_values else None
+        midday_weather = midday.get("weather") or []
+        if not midday_weather:
+            continue
         forecasts.append(DayForecast(
             date=day_date,
             high=max(highs),
             low=min(lows),
-            icon=midday["weather"][0]["icon"],
-            description=midday["weather"][0]["description"],
+            icon=midday_weather[0]["icon"],
+            description=midday_weather[0]["description"],
             precip_chance=precip_chance,
         ))
 

@@ -37,6 +37,12 @@ def _today(tz: tzinfo | None) -> date:
 
 # Cache the built service object so fetch_events and fetch_birthdays reuse it
 # within the same process run (fix: service built twice).
+#
+# Note: service account tokens auto-refresh via the google-auth library, so
+# caching the service object is safe for the typical hourly-cron use case.
+# The Google client library does not expose per-request HTTP timeouts;
+# callers rely on the ThreadPoolExecutor timeout in main.py (120s) as the
+# upper bound on any single API call.
 _service_cache: dict[str, Any] = {}
 _people_service_cache: dict[str, Any] = {}
 
@@ -44,9 +50,15 @@ _people_service_cache: dict[str, Any] = {}
 def _build_service(cfg: GoogleConfig):
     key = cfg.service_account_path
     if key not in _service_cache:
-        creds = service_account.Credentials.from_service_account_file(
-            cfg.service_account_path, scopes=_SCOPES
-        )
+        try:
+            creds = service_account.Credentials.from_service_account_file(
+                cfg.service_account_path, scopes=_SCOPES
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to load service account credentials from "
+                f"{cfg.service_account_path!r}: {exc}"
+            ) from exc
         _service_cache[key] = build("calendar", "v3", credentials=creds, cache_discovery=False)
     return _service_cache[key]
 
@@ -60,9 +72,15 @@ def _build_people_service(cfg: GoogleConfig):
     """
     key = f"{cfg.service_account_path}:{cfg.contacts_email}"
     if key not in _people_service_cache:
-        creds = service_account.Credentials.from_service_account_file(
-            cfg.service_account_path, scopes=_PEOPLE_SCOPES
-        )
+        try:
+            creds = service_account.Credentials.from_service_account_file(
+                cfg.service_account_path, scopes=_PEOPLE_SCOPES
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to load service account credentials from "
+                f"{cfg.service_account_path!r}: {exc}"
+            ) from exc
         if cfg.contacts_email:
             creds = creds.with_subject(cfg.contacts_email)
         _people_service_cache[key] = build("people", "v1", credentials=creds, cache_discovery=False)

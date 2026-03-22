@@ -22,16 +22,20 @@ test: _check-venv
 check: _check-venv
 	$(VENV) -m src.main --check-config
 
+PI_USER ?= pi
+PI_HOST ?= raspberrypi.local
+PI_DIR  ?= ~/home-dashboard
+
 deploy:
 	rsync -avz --exclude='venv' --exclude='output/*.png' \
 		--exclude='__pycache__' --exclude='.git' \
 		--exclude='credentials/' --exclude='config/config.yaml' \
-		. pi@raspberrypi.local:~/home-dashboard/
+		. $(PI_USER)@$(PI_HOST):$(PI_DIR)/
 
 install:
 	@echo "Copying systemd units to Pi..."
-	scp deploy/dashboard.service deploy/dashboard.timer pi@raspberrypi.local:/tmp/
-	ssh pi@raspberrypi.local " \
+	scp deploy/dashboard.service deploy/dashboard.timer $(PI_USER)@$(PI_HOST):/tmp/
+	ssh $(PI_USER)@$(PI_HOST) " \
 		sudo cp /tmp/dashboard.service /etc/systemd/system/ && \
 		sudo cp /tmp/dashboard.timer /etc/systemd/system/ && \
 		sudo systemctl daemon-reload && \
