@@ -182,7 +182,7 @@ def draw_week(
             abbr_w = text_width(draw, day_abbr + " ", fnt)
             draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=style.bg)
         elif is_today and not style.invert_today_col:
-            # Non-inverted today: bold text + thick underline accent
+            # Non-inverted today: bold text + accent
             fnt = style.font_bold(16)
             num_bb = draw.textbbox((0, 0), day_num, font=fnt)
             abbr_bb = draw.textbbox((0, 0), day_abbr, font=fnt)
@@ -192,9 +192,13 @@ def draw_week(
             draw.text((cx + PAD, ty_abbr), day_abbr, font=fnt, fill=style.fg)
             abbr_w = text_width(draw, day_abbr + " ", fnt)
             draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=style.fg)
-            # Thick 2px underline beneath the day label
-            hline(draw, y0 + header_h - 3, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
-            hline(draw, y0 + header_h - 2, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
+            if style.show_borders:
+                # Thick 2px underline beneath the day label
+                hline(draw, y0 + header_h - 3, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
+                hline(draw, y0 + header_h - 2, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
+            else:
+                # Subtle 1px border around the column header cell
+                draw.rectangle((cx, y0, cx + col_w - 1, y0 + header_h - 1), outline=style.fg)
         elif is_weekend:
             # Weekend: lighter styling — regular weight instead of semibold
             wknd_abbr_font = style.font_regular(11)
@@ -269,15 +273,18 @@ def draw_week(
     month_h = mbb[3] - mbb[1]
     month_band_h = month_h + PAD * 2
 
-    # Inverted black band for month header
-    filled_rect(
-        draw,
-        (sat_cx, date_y, sat_cx + combined_date_w - 1, date_y + month_band_h - 1),
-        fill=style.fg,
-    )
     month_x = sat_cx + (combined_date_w - month_w) // 2 - mbb[0]
     month_y = date_y + (month_band_h - month_h) // 2 - mbb[1]
-    draw.text((month_x, month_y), month_text, font=month_font, fill=style.bg)
+    if style.show_borders:
+        # Inverted black band for month header
+        filled_rect(
+            draw,
+            (sat_cx, date_y, sat_cx + combined_date_w - 1, date_y + month_band_h - 1),
+            fill=style.fg,
+        )
+        draw.text((month_x, month_y), month_text, font=month_font, fill=style.bg)
+    else:
+        draw.text((month_x, month_y), month_text, font=month_font, fill=style.fg)
 
     # Day number — centred in the remaining space below the band
     day_area_y = date_y + month_band_h

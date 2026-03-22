@@ -191,7 +191,7 @@ def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
             start=_at(5, 19), end=_at(5, 22),
             location="Chris & Dana's",
         ),
-        # Sunday (col 6) — Dense day for today/old_fashioned themes
+        # Sunday (col 6)
         CalendarEvent(
             summary="Weekend",
             start=datetime.combine(week_start + timedelta(days=6), datetime.min.time()),
@@ -207,28 +207,6 @@ def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
             summary="Brunch",
             start=_at(6, 10), end=_at(6, 12),
             location="The Griddle Cafe",
-        ),
-        CalendarEvent(
-            summary="Museum Visit",
-            start=_at(6, 13), end=_at(6, 15, 30),
-            location="SFMOMA",
-        ),
-        CalendarEvent(
-            summary="Grocery Run",
-            start=_at(6, 16), end=_at(6, 17),
-        ),
-        CalendarEvent(
-            summary="Meal Prep",
-            start=_at(6, 17), end=_at(6, 18, 30),
-            location="Home",
-        ),
-        CalendarEvent(
-            summary="Family Call",
-            start=_at(6, 19), end=_at(6, 19, 30),
-        ),
-        CalendarEvent(
-            summary="Read & Wind Down",
-            start=_at(6, 20, 30), end=_at(6, 22),
         ),
     ]
 
