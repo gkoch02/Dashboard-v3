@@ -182,7 +182,7 @@ def draw_week(
             abbr_w = text_width(draw, day_abbr + " ", fnt)
             draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=style.bg)
         elif is_today and not style.invert_today_col:
-            # Non-inverted today: bold text + thick underline accent
+            # Non-inverted today: bold text + accent
             fnt = style.font_bold(16)
             num_bb = draw.textbbox((0, 0), day_num, font=fnt)
             abbr_bb = draw.textbbox((0, 0), day_abbr, font=fnt)
@@ -192,9 +192,13 @@ def draw_week(
             draw.text((cx + PAD, ty_abbr), day_abbr, font=fnt, fill=style.fg)
             abbr_w = text_width(draw, day_abbr + " ", fnt)
             draw.text((cx + PAD + abbr_w, ty_num), day_num, font=fnt, fill=style.fg)
-            # Thick 2px underline beneath the day label
-            hline(draw, y0 + header_h - 3, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
-            hline(draw, y0 + header_h - 2, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
+            if style.show_borders:
+                # Thick 2px underline beneath the day label
+                hline(draw, y0 + header_h - 3, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
+                hline(draw, y0 + header_h - 2, cx + PAD, cx + col_w - PAD - 1, fill=style.fg)
+            else:
+                # Subtle 1px border around the column header cell
+                draw.rectangle((cx, y0, cx + col_w - 1, y0 + header_h - 1), outline=style.fg)
         elif is_weekend:
             # Weekend: lighter styling — regular weight instead of semibold
             wknd_abbr_font = style.font_regular(11)

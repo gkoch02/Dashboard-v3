@@ -40,7 +40,7 @@ def minimalist_theme() -> Theme:
             fg=0,
             bg=1,
             invert_header=False,          # no filled bar, no border line
-            invert_today_col=True,        # bold black today — the NOW is declared
+            invert_today_col=False,       # subtle border around today's column header
             invert_allday_bars=True,      # solid black all-day bars, no outlines
             show_borders=False,           # no structural borders or separator lines
             spacing_scale=1.0,            # tight, grid-precise event packing
