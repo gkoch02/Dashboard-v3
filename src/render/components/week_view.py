@@ -269,10 +269,17 @@ def draw_week(
 
     # Combined "Today" cell — inverted month header, normal day number
     _month_fn = style.font_month_title if style.font_month_title is not None else style.font_bold
-    month_font = _month_fn(33)
     month_text = today.strftime("%B").upper()
+    _month_size = 33
+    month_font = _month_fn(_month_size)
     mbb = draw.textbbox((0, 0), month_text, font=month_font)
     month_w = mbb[2] - mbb[0]
+    # Scale down font until the text fits within the combined cell width (with padding)
+    while month_w > combined_date_w - PAD * 2 and _month_size > 8:
+        _month_size -= 1
+        month_font = _month_fn(_month_size)
+        mbb = draw.textbbox((0, 0), month_text, font=month_font)
+        month_w = mbb[2] - mbb[0]
     month_h = mbb[3] - mbb[1]
     month_band_h = month_h + PAD * 2
 

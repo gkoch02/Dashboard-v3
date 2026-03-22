@@ -8,7 +8,7 @@ Python eInk dashboard for Raspberry Pi. Displays a weekly calendar (Google Calen
 
 ```bash
 make setup          # Create venv, install deps, copy config template
-make test           # Run pytest (636 tests across 31 files)
+make test           # Run pytest (775 tests across 31 files)
 make dry            # Preview with dummy data → output/latest.png
 make check          # Validate config/config.yaml
 make deploy         # Rsync to Pi
@@ -97,6 +97,7 @@ Components are pure functions: `draw_*(draw, data, region, style) -> None`. No g
 --dry-run              Save PNG instead of writing to eInk hardware
 --dummy                Use built-in dummy data (no API keys needed)
 --config PATH          Custom config file path
+--date YYYY-MM-DD      Override today's date for dry-run previews (requires --dry-run)
 --force-full-refresh   Bypass fetch intervals and circuit breaker
 --check-config         Validate config and exit
 ```
@@ -154,3 +155,4 @@ default to `None` and fall back gracefully so adding a new field never breaks ex
 - Default canvas: 800×480; scaled via LANCZOS to match display resolution
 - Image hash comparison (`last_image_hash.txt`) skips eInk writes when content unchanged
 - Random theme state persists in `output/random_theme_state.json`; delete it to force a new theme pick mid-day
+- `terminal` theme: the month band font (`font_month_title`) starts at 33px and scales down to fit longer names (e.g. FEBRUARY, SEPTEMBER) within the combined date cell width

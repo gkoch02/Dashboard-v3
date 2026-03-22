@@ -145,7 +145,8 @@ spacing (0.85× scale). Today's column and all-day event bars both pop as white-
 blocks. Multi-font typographic system: Share Tech Mono for event body text; Maratype for the
 dashboard title, day column headers, and quote body; UESC Display for the month band, section
 labels (WEATHER / BIRTHDAYS / QUOTE OF THE DAY), and quote attribution; Synthetic Genesis for
-the large today date numeral.
+the large today date numeral. The month band font scales down automatically so long names
+(FEBRUARY, SEPTEMBER) always fit the cell.
 
 ![Terminal theme](output/theme_terminal.png)
 
@@ -677,7 +678,7 @@ to `output/calendar_sync_state.json`.
 |---|---|
 | `make setup` | Create venv, install dependencies, create config from template |
 | `make dry` | Render with dummy data to `output/latest.png` |
-| `make test` | Run `pytest tests/ -v` (591 tests across 25 files) |
+| `make test` | Run `pytest tests/ -v` (775 tests across 31 files) |
 | `make check` | Validate config file and exit |
 | `make deploy` | rsync project to Raspberry Pi |
 | `make install` | Copy systemd timer/service to Pi and enable |
@@ -690,6 +691,7 @@ to `output/calendar_sync_state.json`.
 | `--dummy` | Use built-in dummy data (no API calls needed) |
 | `--config PATH` | Config file path (default: `config/config.yaml`) |
 | `--theme THEME` | Override the theme set in `config.yaml`. Choices: `default`, `terminal`, `minimalist`, `old_fashioned`, `today`, `fantasy`, `qotd`, `random` |
+| `--date YYYY-MM-DD` | Override today's date for the dry-run preview (requires `--dry-run`) |
 | `--force-full-refresh` | Force full eInk refresh; bypasses fetch intervals and circuit breaker |
 | `--check-config` | Validate config and exit |
 
@@ -762,7 +764,7 @@ Dashboard-v3/
 │           ├── today_view.py
 │           ├── info_panel.py
 │           └── qotd_panel.py
-├── tests/                        # 25 test files, 591 tests
+├── tests/                        # 31 test files, 775 tests
 ├── Makefile
 ├── requirements.txt              # Core dependencies
 └── requirements-pi.txt           # Raspberry Pi hardware dependencies
