@@ -194,9 +194,12 @@ aesthetic. Tighter event spacing. Today's column pops as a white-fill/black-text
 
 #### minimalist
 
-Slim 22px header gives the calendar more room. Outlined all-day bars instead of filled
-blocks. DM Sans font. Generous spacing for a clean, editorial look. Birthdays panel
-hidden by default.
+Bauhaus editorial: form follows function. The week grid dominates at 374px — 54px more
+than default. Today's column header is a solid black block (not a soft underline). All-day
+bars are filled black. Events pack to a tight 1.0× grid. An asymmetric bottom strip puts
+weather at 500px and the quote at 300px. Section labels drop to 8pt regular so data leads.
+A 2px left-margin rule and 2px bottom rail frame the canvas. DM Sans font. Birthdays
+panel hidden.
 
 ![Minimalist theme](output/theme_minimalist.png)
 
