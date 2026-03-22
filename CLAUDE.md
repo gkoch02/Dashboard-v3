@@ -8,7 +8,7 @@ Python eInk dashboard for Raspberry Pi. Displays a weekly calendar (Google Calen
 
 ```bash
 make setup          # Create venv, install deps, copy config template
-make test           # Run pytest (609 tests across 26 files)
+make test           # Run pytest (636 tests across 31 files)
 make dry            # Preview with dummy data → output/latest.png
 make check          # Validate config/config.yaml
 make deploy         # Rsync to Pi
@@ -59,7 +59,7 @@ config/
 ├── config.example.yaml        # Template (copy to config.yaml)
 └── quotes.json                # Bundled daily quotes
 
-tests/                         # 26 test files, extensive mocking
+tests/                         # 31 test files, extensive mocking
 fonts/                         # Bundled TTF fonts
 deploy/                        # Systemd service + timer
 output/                        # Generated PNGs + cache files (git-ignored except latest.png)
@@ -87,7 +87,7 @@ Components are pure functions: `draw_*(draw, data, region, style) -> None`. No g
 - **Dataclass-first**: pure data models with no I/O in `src/data/models.py`
 - **Config mirrors YAML**: dataclass hierarchy in `config.py` matches YAML structure; all fields optional with defaults
 - **Max line length**: 100 characters
-- **Testing**: heavy use of `unittest.mock.patch`; fixtures for temp dirs and dummy data
+- **Testing**: heavy use of `unittest.mock.patch`; fixtures for temp dirs and dummy data; every public render function has dedicated smoke tests plus logic unit tests
 - **Thread safety**: cache operations use `threading.Lock()`
 - **Graceful degradation**: fetch failure → load cached → use stale data → staleness indicator in header
 
