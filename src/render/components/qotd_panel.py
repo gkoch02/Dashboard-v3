@@ -17,10 +17,18 @@ from PIL import ImageDraw
 from src.data.models import WeatherData
 from src.render.components.info_panel import _quote_for_today
 from src.render.fonts import weather_icon as weather_icon_font
-from src.render.icons import draw_weather_icon
+from src.render.icons import draw_weather_icon, OWM_ICON_MAP, FALLBACK_ICON
 from src.render.moon import moon_phase_glyph
 from src.render.primitives import hline, text_height
 from src.render.theme import ComponentRegion, ThemeStyle
+
+
+def _icon_width(draw, owm_code: str, size: int) -> int:
+    """Return the actual rendered pixel width of a weather icon glyph."""
+    font = weather_icon_font(size)
+    glyph = OWM_ICON_MAP.get(owm_code, FALLBACK_ICON)
+    bbox = draw.textbbox((0, 0), glyph, font=font)
+    return bbox[2]  # right edge from origin = true rendered width
 
 
 # ---------------------------------------------------------------------------
@@ -202,12 +210,13 @@ def draw_qotd_weather(
     icon_size = 40
     icon_y = center_y - icon_size // 2
     draw_weather_icon(draw, (Z1_X, icon_y), weather.current_icon, size=icon_size, fill=style.fg)
+    icon_right = Z1_X + _icon_width(draw, weather.current_icon, icon_size)
 
     temp_font = style.font_bold(32)
     temp_str = f"{weather.current_temp:.0f}°"
     temp_bbox = draw.textbbox((0, 0), temp_str, font=temp_font)
     temp_h = temp_bbox[3] - temp_bbox[1]
-    temp_x = Z1_X + icon_size + 6
+    temp_x = icon_right + 6
     # Compensate for font's internal top bearing so the number sits centered
     temp_y = center_y - temp_h // 2 - temp_bbox[1]
     draw.text((temp_x, temp_y), temp_str, font=temp_font, fill=style.fg)
@@ -264,7 +273,8 @@ def draw_qotd_weather(
             fc_y = center_y - block_fc_h // 2
 
             draw_weather_icon(draw, (cx, fc_y), fc.icon, size=fc_icon_size, fill=style.fg)
-            tx = cx + fc_icon_size + 4
+            # Use measured glyph width (not font size) to avoid overlap
+            tx = cx + _icon_width(draw, fc.icon, fc_icon_size) + 4
             draw.text((tx, fc_y), fc.date.strftime("%a"), font=day_font, fill=style.fg)
             draw.text(
                 (tx, fc_y + row_lh + 3),
