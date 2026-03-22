@@ -151,11 +151,15 @@ def draw_qotd_weather(
 ) -> None:
     """Draw a compact full-width weather banner.
 
-    Horizontal layout (left → right):
-      1. Weather icon + large temperature
-      2. Current description, Hi/Lo, feels-like / wind
-      3. 1–3 day forecast columns
-      4. Moon phase glyph (far right)
+    The banner is divided into four fixed zones (pixel offsets from x0):
+
+        [ pad ][ icon + temp ][ conditions text ][ forecast cols ][ moon ][ pad ]
+               |              |                  |                |
+              Z1             Z2                 Z3              Z4
+
+    Fixed zone boundaries prevent overlap regardless of font metrics or
+    temperature string width.  Zone 2 text is truncated to its allocated
+    width.  Zone 3 columns share whatever space remains.
 
     A single thin separator line runs across the very top of the region.
     """
@@ -168,8 +172,16 @@ def draw_qotd_weather(
     y0 = region.y
     w = region.w
     h = region.h
-    pad = 14
     center_y = y0 + h // 2
+
+    # Fixed zone boundaries (absolute x, relative to x0)
+    PAD = 14
+    Z1_X = x0 + PAD          # icon starts here
+    Z2_X = x0 + 185          # conditions text starts here
+    Z3_X = x0 + 430          # forecast columns start here
+    MOON_W = 26               # px reserved for moon glyph on the far right
+    Z3_RIGHT = x0 + w - PAD - MOON_W - 4
+    Z2_MAX_W = Z3_X - Z2_X - 12   # max width for conditions text (with gap)
 
     # Thin separator between quote area and banner
     hline(draw, y0, x0, x0 + w - 1, fill=style.fg)
@@ -186,36 +198,30 @@ def draw_qotd_weather(
         )
         return
 
-    # ---- Section 1: icon + temperature ----
+    # ---- Zone 1: icon + temperature ----
     icon_size = 40
-    icon_x = x0 + pad
     icon_y = center_y - icon_size // 2
-    draw_weather_icon(draw, (icon_x, icon_y), weather.current_icon, size=icon_size, fill=style.fg)
+    draw_weather_icon(draw, (Z1_X, icon_y), weather.current_icon, size=icon_size, fill=style.fg)
 
-    temp_font = style.font_bold(34)
+    temp_font = style.font_bold(32)
     temp_str = f"{weather.current_temp:.0f}°"
     temp_bbox = draw.textbbox((0, 0), temp_str, font=temp_font)
     temp_h = temp_bbox[3] - temp_bbox[1]
-    temp_x = icon_x + icon_size + 6
+    temp_x = Z1_X + icon_size + 6
+    # Compensate for font's internal top bearing so the number sits centered
     temp_y = center_y - temp_h // 2 - temp_bbox[1]
     draw.text((temp_x, temp_y), temp_str, font=temp_font, fill=style.fg)
-    temp_right = temp_x + (temp_bbox[2] - temp_bbox[0])
 
-    # ---- Section 2: description + hi/lo + detail ----
-    sec2_x = temp_right + 20
-    row_gap = 3
+    # ---- Zone 2: description + hi/lo + detail ----
+    row_gap = 4
 
-    desc_font = style.font_semibold(13)
+    desc_font = style.font_semibold(12)
+    hilo_font = style.font_regular(11)
+    detail_font = style.font_regular(10)
+
     desc = weather.current_description.title()
-    desc_bbox = draw.textbbox((0, 0), desc, font=desc_font)
-    desc_h = desc_bbox[3] - desc_bbox[1]
-
-    hilo_font = style.font_regular(12)
     hilo_str = f"H:{weather.high:.0f}°  L:{weather.low:.0f}°"
-    hilo_bbox = draw.textbbox((0, 0), hilo_str, font=hilo_font)
-    hilo_h = hilo_bbox[3] - hilo_bbox[1]
 
-    detail_font = style.font_regular(11)
     detail_parts: list[str] = []
     if weather.feels_like is not None:
         detail_parts.append(f"Feels {weather.feels_like:.0f}°")
@@ -226,45 +232,42 @@ def draw_qotd_weather(
             wind_str += f" {deg_to_compass(weather.wind_deg)}"
         detail_parts.append(wind_str)
     detail_str = "  ·  ".join(detail_parts) if detail_parts else f"Humidity {weather.humidity}%"
-    detail_bbox = draw.textbbox((0, 0), detail_str, font=detail_font)
-    detail_h = detail_bbox[3] - detail_bbox[1]
 
+    desc_h = text_height(desc_font)
+    hilo_h = text_height(hilo_font)
+    detail_h = text_height(detail_font)
     block_h = desc_h + row_gap + hilo_h + row_gap + detail_h
     by = center_y - block_h // 2
 
-    draw.text((sec2_x, by - desc_bbox[1]), desc, font=desc_font, fill=style.fg)
+    from src.render.primitives import draw_text_truncated
+    draw_text_truncated(draw, (Z2_X, by), desc, desc_font, Z2_MAX_W, fill=style.fg)
     by += desc_h + row_gap
-    draw.text((sec2_x, by - hilo_bbox[1]), hilo_str, font=hilo_font, fill=style.fg)
+    draw_text_truncated(draw, (Z2_X, by), hilo_str, hilo_font, Z2_MAX_W, fill=style.fg)
     by += hilo_h + row_gap
-    draw.text((sec2_x, by - detail_bbox[1]), detail_str, font=detail_font, fill=style.fg)
+    draw_text_truncated(draw, (Z2_X, by), detail_str, detail_font, Z2_MAX_W, fill=style.fg)
 
-    # ---- Section 3: forecast columns ----
-    # Reserve space on the right for the moon glyph
-    moon_reserve = 32
-    sec2_max_w = int(w * 0.32)
-    sec3_x = sec2_x + sec2_max_w + 16
-    sec3_right = x0 + w - pad - moon_reserve
-
+    # ---- Zone 3: forecast columns ----
     forecast_items = weather.forecast or []
     n_cols = min(len(forecast_items), 3)
 
-    if n_cols > 0 and sec3_x < sec3_right:
-        col_w = (sec3_right - sec3_x) // n_cols
-        day_font = style.font_semibold(11)
-        sm_font = style.font_regular(11)
-        fc_icon_size = 18
+    if n_cols > 0 and Z3_X < Z3_RIGHT:
+        col_w = (Z3_RIGHT - Z3_X) // n_cols
+        day_font = style.font_semibold(10)
+        sm_font = style.font_regular(10)
+        fc_icon_size = 16
 
         for i, fc in enumerate(forecast_items[:n_cols]):
-            cx = sec3_x + i * col_w
+            cx = Z3_X + i * col_w
             row_lh = text_height(day_font)
-            block_fc_h = fc_icon_size + 2 + row_lh
+            # Center the icon+text block vertically
+            block_fc_h = fc_icon_size + 3 + row_lh + 3 + row_lh
             fc_y = center_y - block_fc_h // 2
 
             draw_weather_icon(draw, (cx, fc_y), fc.icon, size=fc_icon_size, fill=style.fg)
             tx = cx + fc_icon_size + 4
             draw.text((tx, fc_y), fc.date.strftime("%a"), font=day_font, fill=style.fg)
             draw.text(
-                (tx, fc_y + row_lh + 2),
+                (tx, fc_y + row_lh + 3),
                 f"{fc.high:.0f}°/{fc.low:.0f}°",
                 font=sm_font, fill=style.fg,
             )
@@ -272,9 +275,8 @@ def draw_qotd_weather(
     # ---- Moon phase glyph (right edge) ----
     if today is not None:
         moon_glyph = moon_phase_glyph(today)
-        moon_font = weather_icon_font(22)
+        moon_font = weather_icon_font(20)
         moon_bbox = draw.textbbox((0, 0), moon_glyph, font=moon_font)
-        moon_w = moon_bbox[2] - moon_bbox[0]
-        moon_x = x0 + w - pad - moon_w - moon_bbox[0]
+        moon_x = x0 + w - PAD - (moon_bbox[2] - moon_bbox[0]) - moon_bbox[0]
         moon_y = center_y - (moon_bbox[3] - moon_bbox[1]) // 2 - moon_bbox[1]
         draw.text((moon_x, moon_y), moon_glyph, font=moon_font, fill=style.fg)
