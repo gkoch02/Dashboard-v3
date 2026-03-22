@@ -19,7 +19,7 @@ from src.render.components.info_panel import _quote_for_today
 from src.render.fonts import weather_icon as weather_icon_font
 from src.render.icons import draw_weather_icon, OWM_ICON_MAP, FALLBACK_ICON
 from src.render.moon import moon_phase_glyph
-from src.render.primitives import hline, text_height
+from src.render.primitives import text_height
 from src.render.theme import ComponentRegion, ThemeStyle
 
 
@@ -168,8 +168,6 @@ def draw_qotd_weather(
     Fixed zone boundaries prevent overlap regardless of font metrics or
     temperature string width.  Zone 2 text is truncated to its allocated
     width.  Zone 3 columns share whatever space remains.
-
-    A single thin separator line runs across the very top of the region.
     """
     if region is None:
         region = ComponentRegion(0, 400, 800, 80)
@@ -191,9 +189,6 @@ def draw_qotd_weather(
     Z3_RIGHT = x0 + w - PAD - MOON_W - 4
     Z2_MAX_W = Z3_X - Z2_X - 12   # max width for conditions text (with gap)
 
-    # Thin separator between quote area and banner
-    hline(draw, y0, x0, x0 + w - 1, fill=style.fg)
-
     if weather is None:
         msg_font = style.font_regular(13)
         msg = "Weather unavailable"
@@ -212,7 +207,7 @@ def draw_qotd_weather(
     draw_weather_icon(draw, (Z1_X, icon_y), weather.current_icon, size=icon_size, fill=style.fg)
     icon_right = Z1_X + _icon_width(draw, weather.current_icon, icon_size)
 
-    temp_font = style.font_bold(32)
+    temp_font = style.font_bold(34)
     temp_str = f"{weather.current_temp:.0f}°"
     temp_bbox = draw.textbbox((0, 0), temp_str, font=temp_font)
     temp_h = temp_bbox[3] - temp_bbox[1]
@@ -224,9 +219,9 @@ def draw_qotd_weather(
     # ---- Zone 2: description + hi/lo + detail ----
     row_gap = 4
 
-    desc_font = style.font_semibold(12)
-    hilo_font = style.font_regular(11)
-    detail_font = style.font_regular(10)
+    desc_font = style.font_semibold(14)
+    hilo_font = style.font_regular(13)
+    detail_font = style.font_regular(12)
 
     desc = weather.current_description.title()
     hilo_str = f"H:{weather.high:.0f}°  L:{weather.low:.0f}°"
@@ -261,8 +256,8 @@ def draw_qotd_weather(
 
     if n_cols > 0 and Z3_X < Z3_RIGHT:
         col_w = (Z3_RIGHT - Z3_X) // n_cols
-        day_font = style.font_semibold(10)
-        sm_font = style.font_regular(10)
+        day_font = style.font_semibold(12)
+        sm_font = style.font_regular(12)
         fc_icon_size = 16
 
         for i, fc in enumerate(forecast_items[:n_cols]):
@@ -285,7 +280,7 @@ def draw_qotd_weather(
     # ---- Moon phase glyph (right edge) ----
     if today is not None:
         moon_glyph = moon_phase_glyph(today)
-        moon_font = weather_icon_font(20)
+        moon_font = weather_icon_font(22)
         moon_bbox = draw.textbbox((0, 0), moon_glyph, font=moon_font)
         moon_x = x0 + w - PAD - (moon_bbox[2] - moon_bbox[0]) - moon_bbox[0]
         moon_y = center_y - (moon_bbox[3] - moon_bbox[1]) // 2 - moon_bbox[1]
