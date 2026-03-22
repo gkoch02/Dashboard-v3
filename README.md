@@ -71,6 +71,87 @@ Reports errors (must fix) and warnings (may cause issues) in your configuration.
 
 ---
 
+## Upgrading from v2
+
+v3 is a drop-in upgrade. Your existing credentials and `config.yaml` work without changes.
+
+### Step 1 -- Clone the new repo
+
+```bash
+git clone https://github.com/gkoch02/Dashboard-v3.git
+cd Dashboard-v3
+```
+
+### Step 2 -- Copy your config and credentials
+
+```bash
+cp /path/to/Dashboard-v2/config/config.yaml config/config.yaml
+cp /path/to/Dashboard-v2/credentials/service_account.json credentials/service_account.json
+```
+
+If you had a `config/birthdays.json`, copy that too:
+
+```bash
+cp /path/to/Dashboard-v2/config/birthdays.json config/birthdays.json
+```
+
+### Step 3 -- Install dependencies
+
+```bash
+make setup
+```
+
+The dependency list is identical to v2; `make setup` creates a fresh venv.
+
+### Step 4 -- Clear the old cache
+
+v3 uses a different cache format. Delete v2's output files before the first run:
+
+```bash
+rm -f output/calendar_cache.json output/weather_cache.json \
+      output/birthday_cache.json output/calendar_sync_state.json \
+      output/last_image_hash.txt
+```
+
+### Step 5 -- Validate your config
+
+```bash
+make check
+```
+
+This is new in v3. It reports any config errors or warnings before you run the dashboard.
+
+### Step 6 -- Test
+
+```bash
+make dry            # renders output/latest.png with dummy data
+venv/bin/python -m src.main --dry-run --config config/config.yaml   # live data
+```
+
+### Step 7 -- Redeploy to Pi
+
+```bash
+make deploy
+ssh pi@raspberrypi.local "cd ~/home-dashboard && make setup"
+make install        # reinstall systemd timer (unit file has changed)
+```
+
+### What's new in v3
+
+Your existing config is fully compatible. These are opt-in additions:
+
+| Feature | How to enable |
+|---|---|
+| **Themes** (6 built-in layouts) | Add `theme: terminal` (or `minimalist`, `old_fashioned`, `today`, `fantasy`) to `config.yaml` |
+| **Event filtering** | Add a `filters:` block — hide events by calendar name, keyword, or all-day status |
+| **Configurable cache TTLs** | Add a `cache:` block to tune per-source TTL and fetch intervals |
+| **Circuit breaker tuning** | `cache.max_failures` and `cache.cooldown_minutes` |
+| **API quota warnings** | `google.daily_quota_warning: 500` logs a warning when calls exceed the threshold |
+| **`--check-config` flag** | Validate config and exit without running the dashboard |
+| **`--force-full-refresh` flag** | Bypass fetch intervals and circuit breaker for a one-off forced refresh |
+
+---
+
 ## Google Calendar Setup
 
 The dashboard reads your calendar via a **Google service account** (no interactive login
