@@ -140,9 +140,12 @@ event bars. 7-day calendar grid with weather/birthdays/quote along the bottom.
 
 #### terminal
 
-Inverted canvas: **black background** with white text. Uses Share Tech Mono for a consistent
-monospace aesthetic across all text. Compact 34px header. Tighter event spacing
-(0.85× scale). Today's column and all-day event bars both pop as white-fill/black-text blocks.
+Inverted canvas: **black background** with white text. Compact 34px header. Tighter event
+spacing (0.85× scale). Today's column and all-day event bars both pop as white-fill/black-text
+blocks. Multi-font typographic system: Share Tech Mono for event body text; Maratype for the
+dashboard title, day column headers, and quote body; UESC Display for the month band, section
+labels (WEATHER / BIRTHDAYS / QUOTE OF THE DAY), and quote attribution; Synthetic Genesis for
+the large today date numeral.
 
 ![Terminal theme](output/theme_terminal.png)
 
@@ -773,7 +776,10 @@ Dashboard-v3/
 |---|---|
 | [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) | Default UI text (all themes) |
 | [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather condition icons + moon phase glyphs |
-| [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) | `terminal` theme |
+| [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) | `terminal` theme — event body text |
+| Maratype | `terminal` theme — dashboard title, day column headers, quote body |
+| UESC Display | `terminal` theme — month band, section labels, quote attribution |
+| Synthetic Genesis | `terminal` theme — large today date numeral |
 | [DM Sans](https://fonts.google.com/specimen/DM+Sans) | `minimalist` theme |
 | [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | `old_fashioned` theme; `qotd` quote text |
 | [Cinzel](https://fonts.google.com/specimen/Cinzel) | `fantasy` theme |
