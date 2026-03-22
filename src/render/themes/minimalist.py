@@ -41,7 +41,7 @@ def minimalist_theme() -> Theme:
             bg=1,
             invert_header=False,          # no filled bar, no border line
             invert_today_col=False,       # subtle border around today's column header
-            invert_allday_bars=True,      # solid black all-day bars, no outlines
+            invert_allday_bars=False,     # outlined all-day bars, no fill
             show_borders=False,           # no structural borders or separator lines
             spacing_scale=1.0,            # tight, grid-precise event packing
             label_font_size=8,            # labels recede; data leads

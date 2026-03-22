@@ -273,15 +273,18 @@ def draw_week(
     month_h = mbb[3] - mbb[1]
     month_band_h = month_h + PAD * 2
 
-    # Inverted black band for month header
-    filled_rect(
-        draw,
-        (sat_cx, date_y, sat_cx + combined_date_w - 1, date_y + month_band_h - 1),
-        fill=style.fg,
-    )
     month_x = sat_cx + (combined_date_w - month_w) // 2 - mbb[0]
     month_y = date_y + (month_band_h - month_h) // 2 - mbb[1]
-    draw.text((month_x, month_y), month_text, font=month_font, fill=style.bg)
+    if style.show_borders:
+        # Inverted black band for month header
+        filled_rect(
+            draw,
+            (sat_cx, date_y, sat_cx + combined_date_w - 1, date_y + month_band_h - 1),
+            fill=style.fg,
+        )
+        draw.text((month_x, month_y), month_text, font=month_font, fill=style.bg)
+    else:
+        draw.text((month_x, month_y), month_text, font=month_font, fill=style.fg)
 
     # Day number — centred in the remaining space below the band
     day_area_y = date_y + month_band_h
