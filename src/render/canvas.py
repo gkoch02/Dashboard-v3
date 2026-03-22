@@ -3,7 +3,9 @@ from PIL import Image, ImageDraw
 
 from src.data.models import DashboardData
 from src.config import DisplayConfig
-from src.render.components import header, week_view, weather_panel, birthday_bar, info_panel, today_view
+from src.render.components import (
+    header, week_view, weather_panel, birthday_bar, info_panel, today_view, qotd_panel,
+)
 from src.render.theme import Theme, default_theme
 
 # Base resolution used when no theme is provided (legacy path).
@@ -75,6 +77,16 @@ def render_dashboard(
             draw, data.events, today,
             forecast=week_forecast,
             region=layout.today_view,
+            style=style,
+        ),
+        "qotd": lambda: qotd_panel.draw_qotd(
+            draw, today,
+            region=layout.qotd,
+            style=style,
+        ),
+        "qotd_weather": lambda: qotd_panel.draw_qotd_weather(
+            draw, data.weather, today,
+            region=layout.weather,
             style=style,
         ),
     }
