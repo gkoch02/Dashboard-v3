@@ -81,8 +81,8 @@ def draw_qotd(
         style = ThemeStyle()
 
     quote = _quote_for_today(today)
-    text = f'\u201c{quote["text"]}\u201d'   # "…" curly quotes
-    author = f'\u2014\u2002{quote["author"]}'  # — thin-space author
+    text = quote["text"]                           # marks rendered separately, large
+    author = f'\u2014\u2002{quote["author"]}'      # — thin-space author
 
     h_pad = 52   # horizontal padding from region edges
     v_pad = 28   # vertical padding at top/bottom
@@ -94,7 +94,7 @@ def draw_qotd(
     best_quote_font = None
     best_attr_font = None
 
-    for size in (52, 48, 44, 40, 36, 32, 28, 24, 20):
+    for size in (64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20):
         q_font = quote_font_fn(size)
         a_size = max(13, int(size * 0.52))
         a_font = style.font_semibold(a_size)
@@ -134,9 +134,33 @@ def draw_qotd(
     )
 
     # Start y for vertical centering
-    y = region.y + (region.h - total_h) // 2
+    text_block_top = region.y + (region.h - total_h) // 2
+    text_block_bottom = text_block_top + total_h
 
-    # Draw each wrapped line, centered horizontally
+    # ---- Decorative oversized quotation marks ----
+    # Rendered at ~3.5× body size, positioned as large corner accents that
+    # frame the centred quote text — opening mark top-left, closing bottom-right.
+    mark_size = min(100, max(60, int(best_size * 3.0)))
+    mark_font = style.font_bold(mark_size)
+
+    for glyph, side in (('\u201c', 'open'), ('\u201d', 'close')):
+        bb = draw.textbbox((0, 0), glyph, font=mark_font)
+        ink_w = bb[2] - bb[0]
+        ink_h = bb[3] - bb[1]
+
+        if side == 'open':
+            # Top-left: ink top sits slightly above the first text line
+            px = region.x + h_pad // 4
+            py = text_block_top - ink_h // 3
+        else:
+            # Bottom-right: ink bottom aligns near the end of the text block
+            px = region.x + region.w - h_pad // 4 - ink_w
+            py = text_block_bottom - ink_h * 2 // 3
+
+        draw.text((px - bb[0], py - bb[1]), glyph, font=mark_font, fill=style.fg)
+
+    # ---- Quote body lines (centered horizontally) ----
+    y = text_block_top
     for line in best_lines:
         lw = int(best_quote_font.getlength(line))
         x = region.x + (region.w - lw) // 2

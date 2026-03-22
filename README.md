@@ -359,7 +359,7 @@ right side. Ornamental double-frame borders with diamond corner pieces.
 
 Quote of the day, full screen. Forgoes the calendar, birthdays, and info panel entirely.
 The display is devoted to a single quote in large Playfair Display Bold, centered
-typographically. Font size scales automatically — from 52px down to 20px — so the full
+typographically. Font size scales automatically — from 64px down to 20px — so the full
 quote always fits without truncation. A compact full-width weather banner runs across the
 bottom 80px: current conditions, hi/lo, feels-like, wind, a 3-day forecast strip, and
 moon phase.
