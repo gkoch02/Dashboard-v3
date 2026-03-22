@@ -16,7 +16,12 @@ from PIL import ImageDraw
 
 from src.data.models import WeatherData
 from src.render.components.info_panel import _quote_for_today
-from src.render.fonts import weather_icon as weather_icon_font
+from src.render.fonts import (
+    weather_icon as weather_icon_font,
+    regular as jakarta_regular,
+    semibold as jakarta_semibold,
+    bold as jakarta_bold,
+)
 from src.render.icons import draw_weather_icon, OWM_ICON_MAP, FALLBACK_ICON
 from src.render.moon import moon_phase_glyph
 from src.render.primitives import text_height
@@ -190,7 +195,7 @@ def draw_qotd_weather(
     Z2_MAX_W = Z3_X - Z2_X - 12   # max width for conditions text (with gap)
 
     if weather is None:
-        msg_font = style.font_regular(13)
+        msg_font = jakarta_regular(13)
         msg = "Weather unavailable"
         bbox = draw.textbbox((0, 0), msg, font=msg_font)
         mw = bbox[2] - bbox[0]
@@ -207,7 +212,7 @@ def draw_qotd_weather(
     draw_weather_icon(draw, (Z1_X, icon_y), weather.current_icon, size=icon_size, fill=style.fg)
     icon_right = Z1_X + _icon_width(draw, weather.current_icon, icon_size)
 
-    temp_font = style.font_bold(34)
+    temp_font = jakarta_bold(34)
     temp_str = f"{weather.current_temp:.0f}°"
     temp_bbox = draw.textbbox((0, 0), temp_str, font=temp_font)
     temp_h = temp_bbox[3] - temp_bbox[1]
@@ -219,9 +224,9 @@ def draw_qotd_weather(
     # ---- Zone 2: description + hi/lo + detail ----
     row_gap = 4
 
-    desc_font = style.font_semibold(14)
-    hilo_font = style.font_regular(13)
-    detail_font = style.font_regular(12)
+    desc_font = jakarta_semibold(14)
+    hilo_font = jakarta_regular(13)
+    detail_font = jakarta_regular(12)
 
     desc = weather.current_description.title()
     hilo_str = f"H:{weather.high:.0f}°  L:{weather.low:.0f}°"
@@ -256,8 +261,8 @@ def draw_qotd_weather(
 
     if n_cols > 0 and Z3_X < Z3_RIGHT:
         col_w = (Z3_RIGHT - Z3_X) // n_cols
-        day_font = style.font_semibold(12)
-        sm_font = style.font_regular(12)
+        day_font = jakarta_semibold(12)
+        sm_font = jakarta_regular(12)
         fc_icon_size = 16
 
         for i, fc in enumerate(forecast_items[:n_cols]):

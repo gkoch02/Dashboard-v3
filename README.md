@@ -142,7 +142,7 @@ Your existing config is fully compatible. These are opt-in additions:
 
 | Feature | How to enable |
 |---|---|
-| **Themes** (7 built-in layouts) | Add `theme: terminal` (or `minimalist`, `old_fashioned`, `today`, `fantasy`, `qotd`) to `config.yaml` |
+| **Themes** (7 built-in layouts) | Add `theme: terminal` (or `minimalist`, `old_fashioned`, `today`, `fantasy`, `qotd`) to `config.yaml`, or pass `--theme THEME` on the command line |
 | **Random daily theme rotation** | Set `theme: random`; optionally add a `random_theme:` block to include/exclude specific themes |
 | **Event filtering** | Add a `filters:` block — hide events by calendar name, keyword, or all-day status |
 | **Configurable cache TTLs** | Add a `cache:` block to tune per-source TTL and fetch intervals |
@@ -249,11 +249,20 @@ birthdays:
 
 ## Themes
 
-Switch the entire dashboard layout and visual style with one line:
+Switch the entire dashboard layout and visual style with one line in `config.yaml`:
 
 ```yaml
 theme: terminal   # default | terminal | minimalist | old_fashioned | today | fantasy | qotd | random
 ```
+
+Or override it from the command line without editing your config:
+
+```bash
+venv/bin/python -m src.main --dry-run --dummy --theme terminal
+```
+
+The `--theme` flag takes precedence over `config.yaml`. All eight values are accepted,
+including `random` (which triggers the daily rotation logic as normal).
 
 Themes control component positions, proportions, fonts, and visual style -- not just
 colors. Each theme can hide sections, rearrange panels, or use entirely different fonts.
@@ -667,6 +676,7 @@ to `output/calendar_sync_state.json`.
 | `--dry-run` | Save to PNG instead of writing to display |
 | `--dummy` | Use built-in dummy data (no API calls needed) |
 | `--config PATH` | Config file path (default: `config/config.yaml`) |
+| `--theme THEME` | Override the theme set in `config.yaml`. Choices: `default`, `terminal`, `minimalist`, `old_fashioned`, `today`, `fantasy`, `qotd`, `random` |
 | `--force-full-refresh` | Force full eInk refresh; bypasses fetch intervals and circuit breaker |
 | `--check-config` | Validate config and exit |
 
@@ -755,7 +765,7 @@ Dashboard-v3/
 | [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather condition icons + moon phase glyphs |
 | [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) | `terminal` theme |
 | [DM Sans](https://fonts.google.com/specimen/DM+Sans) | `minimalist` theme |
-| [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | `old_fashioned` and `qotd` themes |
+| [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) | `old_fashioned` theme; `qotd` quote text |
 | [Cinzel](https://fonts.google.com/specimen/Cinzel) | `fantasy` theme |
 
 Custom fonts can be added per-theme via `ThemeStyle` font callables -- see
