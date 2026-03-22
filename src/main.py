@@ -59,9 +59,14 @@ def _is_morning_startup(now: datetime, quiet_hours_end: int) -> bool:
     return now.hour == quiet_hours_end and now.minute < 30
 
 
-def generate_dummy_data(tz: tzinfo | None = None) -> DashboardData:
-    """Create realistic dummy data for development/testing."""
-    now = datetime.now(tz) if tz is not None else datetime.now()
+def generate_dummy_data(tz: tzinfo | None = None, now: datetime | None = None) -> DashboardData:
+    """Create realistic dummy data for development/testing.
+
+    *now* overrides the current datetime (useful for dry-run with --date).
+    When omitted, ``datetime.now(tz)`` is used.
+    """
+    if now is None:
+        now = datetime.now(tz) if tz is not None else datetime.now()
     today = now.date()
 
     # Find Monday of this week — matches the week_view rendering which is also Monday-based
@@ -482,6 +487,15 @@ def main():
         help="Validate config and exit without rendering",
     )
     parser.add_argument(
+        "--date",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help=(
+            "Override 'today' for the dry-run preview (e.g. 2025-12-25). "
+            "Only meaningful with --dry-run."
+        ),
+    )
+    parser.add_argument(
         "--theme",
         choices=["default", "fantasy", "minimalist", "old_fashioned", "qotd",
                  "random", "terminal", "today"],
@@ -493,6 +507,10 @@ def main():
         ),
     )
     args = parser.parse_args()
+
+    # Validate --date usage early so we can give a clear error message.
+    if args.date is not None and not args.dry_run:
+        parser.error("--date requires --dry-run")
 
     # Configure logging before load_config so any import-time or config-loading
     # log records are formatted correctly (fix: logging order).
@@ -521,6 +539,17 @@ def main():
 
     # Quiet hours — skip refresh entirely between quiet_hours_start and quiet_hours_end
     now = datetime.now(tz)
+
+    # --date: override the current date for dry-run previews
+    if args.date is not None:
+        try:
+            from datetime import date as _date
+            override_date = _date.fromisoformat(args.date)
+        except ValueError:
+            parser.error(f"--date must be in YYYY-MM-DD format, got: {args.date!r}")
+        now = datetime.combine(override_date, now.timetz())
+        logger.info("Dry-run date overridden to: %s", now.date())
+
     if not args.dry_run and _in_quiet_hours(now, cfg.schedule.quiet_hours_start, cfg.schedule.quiet_hours_end):
         logger.info(
             "Quiet hours (%02d:00–%02d:00) — skipping refresh",
@@ -537,7 +566,7 @@ def main():
     # Fetch data
     if args.dummy:
         logger.info("Using dummy data")
-        data = generate_dummy_data(tz=tz)
+        data = generate_dummy_data(tz=tz, now=now)
     else:
         data = fetch_live_data(
             cfg, cache_dir=cfg.output_dir, tz=tz,
