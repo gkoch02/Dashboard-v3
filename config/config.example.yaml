@@ -72,5 +72,14 @@ logging:
 # title: "Home Dashboard"
 
 # UI theme — controls overall layout, proportions, and visual style.
-# Options: default, minimalist, terminal, old_fashioned, today, fantasy
+# Options: default, minimalist, terminal, old_fashioned, today, fantasy, qotd
+# Set to "random" to rotate themes daily (see random_theme below).
 # theme: default
+
+# Daily random theme rotation — only relevant when theme is "random".
+# The theme is chosen once per day at the first refresh after midnight and
+# persisted in output/random_theme_state.json for the rest of the day.
+# random_theme:
+#   include: []  # Allowlist: only rotate among these themes (empty = all themes)
+#   exclude: []  # Denylist: never use these themes
+#                # Example: exclude: ["fantasy", "qotd"]
