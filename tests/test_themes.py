@@ -234,6 +234,12 @@ class TestLoadTheme:
         assert "old_fashioned" in AVAILABLE_THEMES
         assert "today" in AVAILABLE_THEMES
         assert "fantasy" in AVAILABLE_THEMES
+        assert "qotd" in AVAILABLE_THEMES
+
+    def test_loads_qotd(self):
+        t = load_theme("qotd")
+        assert isinstance(t, Theme)
+        assert t.name == "qotd"
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +420,73 @@ class TestRenderDashboardWithThemes:
         t = Theme(name="no-weather", style=ThemeStyle(), layout=layout)
         result = render_dashboard(data, self._cfg(), theme=t)
         assert isinstance(result, Image.Image)
+
+    def test_qotd_theme_produces_valid_image(self):
+        data = _make_data()
+        t = load_theme("qotd")
+        result = render_dashboard(data, self._cfg(), theme=t)
+        assert isinstance(result, Image.Image)
+        assert result.mode == "1"
+        assert result.size == (800, 480)
+
+    def test_qotd_theme_white_background(self):
+        """QOTD theme has a white (1) background."""
+        t = load_theme("qotd")
+        assert t.style.bg == 1
+        assert t.style.fg == 0
+
+    def test_qotd_theme_hides_calendar_components(self):
+        """QOTD theme has no header, week_view, or birthdays in draw_order."""
+        t = load_theme("qotd")
+        assert "header" not in t.layout.draw_order
+        assert "week_view" not in t.layout.draw_order
+        assert "birthdays" not in t.layout.draw_order
+        assert "info" not in t.layout.draw_order
+
+    def test_qotd_theme_uses_qotd_and_weather_drawers(self):
+        """QOTD theme draw_order contains the qotd and qotd_weather components."""
+        t = load_theme("qotd")
+        assert "qotd" in t.layout.draw_order
+        assert "qotd_weather" in t.layout.draw_order
+
+    def test_qotd_theme_qotd_region_covers_most_of_canvas(self):
+        """The quote region should occupy the bulk of the 480px canvas height."""
+        t = load_theme("qotd")
+        assert t.layout.qotd.h >= 380
+        assert t.layout.qotd.w == 800
+        assert t.layout.qotd.visible is True
+
+    def test_qotd_theme_weather_region_full_width_bottom_banner(self):
+        """Weather banner should be full width at the bottom of the canvas."""
+        t = load_theme("qotd")
+        assert t.layout.weather.w == 800
+        assert t.layout.weather.y + t.layout.weather.h == 480
+
+    def test_qotd_theme_quote_and_banner_fill_canvas(self):
+        """Quote region height + weather banner height should equal canvas height."""
+        t = load_theme("qotd")
+        assert t.layout.qotd.h + t.layout.weather.h == 480
+
+    def test_qotd_theme_renders_without_weather(self):
+        """QOTD theme renders gracefully when weather data is None."""
+        data = _make_data()
+        data.weather = None
+        t = load_theme("qotd")
+        result = render_dashboard(data, self._cfg(), theme=t)
+        assert isinstance(result, Image.Image)
+
+    def test_qotd_theme_uses_playfair_fonts(self):
+        """QOTD theme font callables should return Playfair Display fonts."""
+        from PIL import ImageFont
+        t = load_theme("qotd")
+        for fn in (t.style.font_regular, t.style.font_bold, t.style.font_semibold):
+            font = fn(24)
+            assert isinstance(font, ImageFont.FreeTypeFont)
+
+    def test_qotd_layout_qotd_region_default_invisible(self):
+        """ThemeLayout.qotd defaults to visible=False in non-qotd themes."""
+        layout = default_layout()
+        assert layout.qotd.visible is False
 
 
 # ---------------------------------------------------------------------------

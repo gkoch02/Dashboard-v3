@@ -62,6 +62,11 @@ class ThemeLayout:
     today_view: ComponentRegion = field(
         default_factory=lambda: ComponentRegion(0, 60, 800, 280, visible=False)
     )
+    # Used by the ``qotd`` theme for the full-canvas centered quote area.
+    # Hidden by default so existing themes are not affected.
+    qotd: ComponentRegion = field(
+        default_factory=lambda: ComponentRegion(0, 0, 800, 400, visible=False)
+    )
     draw_order: list[str] = field(
         default_factory=lambda: ["header", "week_view", "weather", "birthdays", "info"]
     )
@@ -146,7 +151,7 @@ class Theme:
 # ---------------------------------------------------------------------------
 
 AVAILABLE_THEMES: frozenset[str] = frozenset(
-    {"default", "terminal", "minimalist", "old_fashioned", "today", "fantasy"}
+    {"default", "terminal", "minimalist", "old_fashioned", "today", "fantasy", "qotd"}
 )
 
 
@@ -199,6 +204,9 @@ def load_theme(name: str) -> Theme:
     if name == "fantasy":
         from src.render.themes.fantasy import fantasy_theme
         return fantasy_theme()
+    if name == "qotd":
+        from src.render.themes.qotd import qotd_theme
+        return qotd_theme()
     raise ValueError(
         f"Unknown theme: {name!r}. Available: {', '.join(sorted(AVAILABLE_THEMES))}"
     )
